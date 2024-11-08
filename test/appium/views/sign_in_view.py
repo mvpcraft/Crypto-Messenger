@@ -244,7 +244,6 @@ class SignInView(BaseView):
         self.driver.info("## Creating new multiaccount (password:'%s', keycard:'%s', enable_notification: '%s')" %
                          (password, str(keycard), str(enable_notifications)), device=False)
         if first_user:
-            self.terms_and_privacy_checkbox.click()
             self.create_profile_button.click_until_presence_of_element(self.generate_keys_button)
             self.not_now_button.wait_and_click()
         else:
@@ -292,8 +291,7 @@ class SignInView(BaseView):
 
         if not after_sync_code:
             if not second_user:
-                self.terms_and_privacy_checkbox.click()
-                self.sync_or_recover_profile_button.click_until_presence_of_element(self.generate_keys_button)
+                self.create_profile_button.click_until_presence_of_element(self.generate_keys_button)
                 self.not_now_button.wait_and_click()
             else:
                 self.show_profiles_button.wait_and_click(20)
