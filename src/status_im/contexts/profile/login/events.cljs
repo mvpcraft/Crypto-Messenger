@@ -84,10 +84,7 @@
 
                   (get db :onboarding/new-account?)
                   [[:dispatch [:onboarding/finalize-setup]]
-                   [:dispatch
-                    [:navigate-to-within-stack
-                     [:screen/onboarding.enable-notifications
-                      :screen/onboarding.preparing-status]]]]
+                   [:dispatch [:onboarding/finish-onboarding false]]]
 
                   :else
                   [[:dispatch [:update-theme-and-init-root :shell-stack]]
