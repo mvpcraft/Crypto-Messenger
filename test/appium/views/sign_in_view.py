@@ -290,7 +290,6 @@ class SignInView(BaseView):
             self.log_in_button.click()
             self.not_now_button.click()
         else:
-            self.show_profiles_button.wait_and_click()
             self.plus_profiles_button.click()
             self.sync_or_recover_new_profile_button.click()
         self.scan_sync_code_button.click()

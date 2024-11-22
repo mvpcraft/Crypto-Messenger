@@ -164,6 +164,7 @@ class TestFallbackMultipleDevice(MultipleSharedDeviceTestCase):
         self.sign_in_2.reopen_app(sign_in=False)
 
         self.sign_in_2.just_fyi("Device 2: try syncing profile")
+        self.sign_in_2.explore_new_status_button.click_if_shown()
         self.sign_in_2.sync_profile(sync_code=self.sync_code, first_user=False)
         self.sign_in_2.progress_screen_title.wait_for_element()
         assert self.sign_in_2.progress_screen_title.text == "Oops, something’s wrong"

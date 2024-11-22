@@ -225,7 +225,7 @@ class TestCommunityOneDeviceMerged(MultipleSharedDeviceTestCase):
 
         self.home.just_fyi("Check that can remove user from logged out state")
         self.home.reopen_app(sign_in=False)
-        user_card = self.sign_in.get_user_profile_by_name(username=self.username)
+        user_card = self.sign_in.get_user_profile_by_name(username=recover_user_name)
         user_card.open_user_options()
         self.sign_in.remove_profile_button.click()
         if not self.sign_in.element_by_translation_id("remove-profile-confirm-message").is_element_displayed(30):
@@ -234,7 +234,7 @@ class TestCommunityOneDeviceMerged(MultipleSharedDeviceTestCase):
 
         self.home.just_fyi("Check that removed user is not shown in the list anymore")
         self.home.reopen_app(sign_in=False)
-        if self.sign_in.element_by_text(self.username).is_element_displayed():
+        if self.sign_in.element_by_text(recover_user_name).is_element_displayed():
             self.errors.append("Removed user is re-appeared after relogin!")
 
         self.errors.verify_no_errors()
@@ -243,6 +243,7 @@ class TestCommunityOneDeviceMerged(MultipleSharedDeviceTestCase):
     def test_community_discovery(self):
         try:
             # workaround for case if a user is logged out in the previous test
+            self.sign_in.explore_new_status_button.click_if_shown()
             self.sign_in.sign_in(user_name=self.username)
         except NoSuchElementException:
             pass
