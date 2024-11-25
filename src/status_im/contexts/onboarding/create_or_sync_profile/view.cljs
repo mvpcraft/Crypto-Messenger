@@ -6,7 +6,6 @@
     [react-native.safe-area :as safe-area]
     [status-im.common.check-before-syncing.view :as check-before-syncing]
     [status-im.common.metrics-confirmation-modal.view :as metrics-modal]
-    [status-im.common.not-implemented :as not-implemented]
     [status-im.common.resources :as resources]
     [status-im.config :as config]
     [status-im.contexts.onboarding.create-or-sync-profile.style :as style]
@@ -43,11 +42,6 @@
                 (if create-profile?
                   :screen/onboarding.new-to-status
                   :screen/onboarding.sync-or-recover-profile)]))
-
-(defn- check-your-keycard
-  []
-  (rf/dispatch [:open-modal :screen/keycard.check
-                {:on-press #(rf/dispatch [:keycard.login/check-card])}]))
 
 (defn- option-card-max-height
   [window-height]
@@ -90,16 +84,6 @@
     :image               (resources/get-image :ethereum-address)
     :on-press            #(navigate-to-sign-in-by-recovery-phrase true)}])
 
-(defn- use-empty-keycard-icon-card
-  []
-  [quo/small-option-card
-   {:variant             :icon
-    :title               (i18n/label :t/use-an-empty-keycard)
-    :subtitle            (i18n/label :t/use-an-empty-keycard-subtitle)
-    :accessibility-label :use-an-empty-keycard-icon-card
-    :image               (resources/get-image :use-keycard)
-    :on-press            status-im.common.not-implemented/alert}])
-
 (defn- log-in-by-syncing-icon-card
   []
   [quo/small-option-card
@@ -110,6 +94,16 @@
     :image               (resources/get-image :ethereum-address)
     :on-press            show-check-before-syncing}])
 
+(defn- use-empty-keycard-icon-card
+  []
+  [quo/small-option-card
+   {:variant             :icon
+    :title               (i18n/label :t/use-an-empty-keycard)
+    :subtitle            (i18n/label :t/use-an-empty-keycard-subtitle)
+    :accessibility-label :use-an-empty-keycard-icon-card
+    :image               (resources/get-image :use-keycard)
+    :on-press            #(rf/dispatch [:open-modal :screen/keycard.create-profile])}])
+
 (defn- log-in-with-keycard-icon-card
   []
   [quo/small-option-card
@@ -118,7 +112,9 @@
     :subtitle            (i18n/label :t/log-in-with-keycard-subtitle)
     :accessibility-label :log-in-with-keycard
     :image               (resources/get-image :use-keycard)
-    :on-press            check-your-keycard}])
+    :on-press            (fn []
+                           (rf/dispatch [:open-modal :screen/keycard.check
+                                         {:on-press #(rf/dispatch [:keycard.login/check-card])}]))}])
 
 (defn sign-in-options
   [create-profile?]
