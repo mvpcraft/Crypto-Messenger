@@ -154,7 +154,7 @@ class SignInView(BaseView):
         self.explore_new_status_button = Button(self.driver, accessibility_id="explore-new-status")
         self.create_profile_button = Button(self.driver, accessibility_id='new-to-status-button')
         self.log_in_button = Button(self.driver, accessibility_id='log-in')
-        self.not_now_button = Button(self.driver, xpath="//*[@text='Not now']")
+        self.maybe_later_button = Button(self.driver, accessibility_id="maybe-later-button")
         self.sync_or_recover_profile_button = Button(self.driver, accessibility_id='already-use-status-button')
         self.scan_sync_code_button = Button(self.driver, accessibility_id="scan-sync-code-option-card")
         self.enter_sync_code_button = Button(self.driver, accessibility_id="Enter sync code")
@@ -242,7 +242,7 @@ class SignInView(BaseView):
         self.driver.info("## Creating new multiaccount with password:'%s'" % password, device=False)
         if first_user:
             self.create_profile_button.click_until_presence_of_element(self.start_fresh_lets_go_button)
-            self.not_now_button.wait_and_click()
+            self.maybe_later_button.wait_and_click()
         else:
             if self.show_profiles_button.is_element_displayed(20):
                 self.show_profiles_button.click()
@@ -267,7 +267,7 @@ class SignInView(BaseView):
         if not after_sync_code:
             if not second_user:
                 self.create_profile_button.click_until_presence_of_element(self.start_fresh_lets_go_button)
-                self.not_now_button.wait_and_click()
+                self.maybe_later_button.wait_and_click()
             else:
                 self.plus_profiles_button.click()
                 self.create_new_profile_button.click()
