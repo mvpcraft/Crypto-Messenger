@@ -156,7 +156,7 @@ class SignInView(BaseView):
         self.log_in_button = Button(self.driver, accessibility_id='log-in')
         self.maybe_later_button = Button(self.driver, accessibility_id="maybe-later-button")
         self.sync_or_recover_profile_button = Button(self.driver, accessibility_id='already-use-status-button')
-        self.scan_sync_code_button = Button(self.driver, accessibility_id="scan-sync-code-option-card")
+        self.log_in_by_syncing_button = Button(self.driver, accessibility_id="log-in-by-syncing-icon-card")
         self.enter_sync_code_button = Button(self.driver, accessibility_id="Enter sync code")
         self.enter_sync_code_input = EditBox(self.driver, accessibility_id="enter-sync-code-input")
         self.progress_screen_title = Text(self.driver, accessibility_id="progress-screen-title")
@@ -288,11 +288,11 @@ class SignInView(BaseView):
     def sync_profile(self, sync_code: str, first_user: bool = True):
         if first_user:
             self.log_in_button.click()
-            self.not_now_button.click()
+            self.maybe_later_button.click()
         else:
             self.plus_profiles_button.click()
             self.sync_or_recover_new_profile_button.click()
-        self.scan_sync_code_button.click()
+        self.log_in_by_syncing_button.click()
         for checkbox in self.checkbox_button.find_elements():
             checkbox.click()
         self.continue_button.click()
