@@ -45,6 +45,12 @@
       "wallet.suggested.routes"
       {:fx [[:dispatch [:wallet/handle-suggested-routes (transforms/js->clj event-js)]]]}
 
+      "wallet.router.sign-transactions"
+      {:fx [[:dispatch [:wallet/sign-transactions-signal-received (transforms/js->clj event-js)]]]}
+
+      "wallet.router.transactions-sent"
+      {:fx [[:dispatch [:wallet/transactions-sent-signal-received (transforms/js->clj event-js)]]]}
+
       "envelope.sent"
       (messages.transport/update-envelopes-status
        cofx

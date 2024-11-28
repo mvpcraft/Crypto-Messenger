@@ -575,29 +575,6 @@
                             :from-locked-amounts             {}}}}})
     (is (match? expected-db (:db (dispatch [event-id suggested-routes timestamp]))))))
 
-(h/deftest-event :wallet/add-authorized-transaction
-  [event-id dispatch]
-  (let [hashes          {:chain-1 ["tx-1" "tx-2" "tx-3"]
-                         :chain-2 ["tx-4" "tx-5"]
-                         :chain-3 ["tx-6" "tx-7" "tx-8" "tx-9"]}
-        transaction-id  "txid-1"
-        expected-result {:db {:wallet {:ui           {:send {:transaction-ids ["tx-1" "tx-2" "tx-3"
-                                                                               "tx-4" "tx-5" "tx-6"
-                                                                               "tx-7" "tx-8" "tx-9"]}}
-                                       :transactions (send-utils/map-multitransaction-by-ids
-                                                      transaction-id
-                                                      hashes)}}
-                         :fx [[:dispatch
-                               [:wallet/stop-and-clean-suggested-routes]]
-                              [:dispatch [:wallet/end-transaction-flow]]
-                              [:dispatch-later
-                               [{:ms       2000
-                                 :dispatch [:wallet/clean-just-completed-transaction]}]]]}]
-    (is (match? expected-result
-                (dispatch [event-id
-                           {:id     transaction-id
-                            :hashes hashes}])))))
-
 (h/deftest-event :wallet/select-from-account
   [event-id dispatch]
   (let [stack-id    :screen/stack

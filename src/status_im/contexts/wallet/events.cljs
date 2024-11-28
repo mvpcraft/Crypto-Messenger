@@ -701,3 +701,36 @@
    (let [full-status (cske/transform-keys message transforms/->kebab-case-keyword)]
      {:db (assoc-in db [:wallet :blockchain] full-status)})))
 
+(rf/reg-event-fx
+ :wallet/sign-transactions-signal-received
+ (fn [{:keys [db]} [{send-details :sendDetails :as data}]]
+   (let [type           (if (or (= (:fromToken send-details)
+                                   (:toToken send-details))
+                                (string/blank? (:toToken send-details)))
+                          :send
+                          :swap)
+         callback-fx    (get-in db [:wallet :ui type :sign-transactions-callback-fx])
+         error-response (:errorResponse send-details)]
+     {:fx [(when (and callback-fx (not error-response))
+             callback-fx)]
+      :db (-> db
+              (assoc-in [:wallet :ui type :sign-transactions-callback-fx] nil)
+              (assoc-in [:wallet :ui type :error-response] error-response)
+              (assoc-in [:wallet :ui type :transaction-for-signing] data))})))
+
+(rf/reg-event-fx
+ :wallet/transactions-sent-signal-received
+ (fn [{:keys [db]}
+      [{sent-transactions :sentTransactions
+        send-details      :sendDetails}]]
+   (let [swap? (get-in db [:wallet :ui :swap])]
+     {:fx [[:dispatch
+            (if-let [error-response (:errorResponse send-details)]
+              [(if swap?
+                 :wallet.swap/transaction-failure
+                 :wallet/transaction-failure)
+               error-response]
+              [(if swap?
+                 :wallet.swap/transaction-success
+                 :wallet/transaction-success)
+               sent-transactions])]]})))

@@ -95,8 +95,10 @@
        :subtitle      (str max-slippage "%")
        :subtitle-icon :i/edit
        :size          :small
-       :on-press      #(rf/dispatch [:show-bottom-sheet
-                                     {:content slippage-settings/view}])}]]))
+       :on-press      (fn []
+                        (when-not loading-swap-proposal?
+                          (rf/dispatch [:show-bottom-sheet
+                                        {:content slippage-settings/view}])))}]]))
 
 (defn- pay-token-input
   [{:keys [input-state on-max-press on-input-focus on-token-press on-approve-press input-focused?]}]
@@ -195,7 +197,8 @@
                                                     :approve)
                              :token-value         approval-label-token-value
                              :button-props        (merge {:on-press on-approve-press}
-                                                         (when error-response
+                                                         (when (or loading-swap-proposal?
+                                                                   error-response)
                                                            {:disabled? true}))
                              :customization-color account-color
                              :token-symbol        pay-token-symbol}}]))
@@ -361,9 +364,7 @@
                                                      (not pay-input-error?))
         on-review-swap-press                        (rn/use-callback
                                                      (fn []
-                                                       (rf/dispatch [:navigate-to-within-stack
-                                                                     [:screen/wallet.swap-confirmation
-                                                                      :screen/wallet.setup-swap]])))
+                                                       (rf/dispatch [:wallet.swap/review-swap])))
         on-press                                    (rn/use-callback
                                                      (fn [c]
                                                        (let
@@ -492,7 +493,7 @@
         :on-max-press     on-max-press
         :input-focused?   pay-input-focused?
         :on-token-press   #(rf/dispatch [:show-bottom-sheet {:content pay-token-bottom-sheet}])
-        :on-approve-press #(rf/dispatch [:open-modal :screen/wallet.swap-set-spending-cap])
+        :on-approve-press #(rf/dispatch [:wallet.swap/approve])
         :on-input-focus   (fn []
                             (when platform/android? (rf/dispatch [:dismiss-keyboard]))
                             (set-pay-input-focused? true))}]
