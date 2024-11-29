@@ -1,11 +1,13 @@
 (ns status-im.contexts.keycard.effects
   (:require [keycard.keycard :as keycard]
             [native-module.core :as native-module]
+            [promesa.core :as promesa]
             [react-native.async-storage :as async-storage]
             [react-native.platform :as platform]
             status-im.contexts.keycard.nfc.effects
             [status-im.contexts.keycard.utils :as keycard.utils]
             [status-im.contexts.profile.config :as profile.config]
+            [utils.hex :as hex]
             [utils.re-frame :as rf]))
 
 (defonce ^:private active-listeners (atom []))
@@ -50,7 +52,22 @@
 
 (rf/reg-fx :effects.keycard/sign
  (fn [args]
-   (keycard/sign (keycard.utils/wrap-handlers args))))
+   (-> (keycard/sign args)
+       (promesa/then (keycard.utils/get-on-success args))
+       (promesa/catch (keycard.utils/get-on-failure args)))))
+
+(rf/reg-fx :effects.keycard/sign-hashes
+ (fn [{:keys [hashes pin path on-success] :as args}]
+   (-> (promesa/all
+        (for [hash-data hashes]
+          (-> (keycard/sign {:pin       pin
+                             :path      path
+                             :hash-data (hex/normalize-hex hash-data)})
+              (promesa/then (fn [signature]
+                              {:signature signature
+                               :message   hash-data})))))
+       (promesa/then on-success)
+       (promesa/catch (keycard.utils/get-on-failure args)))))
 
 (rf/reg-fx :keycard/init-card
  (fn [args]
