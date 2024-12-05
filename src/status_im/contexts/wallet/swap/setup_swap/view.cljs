@@ -25,7 +25,7 @@
     [utils.re-frame :as rf]
     [utils.string :as utils.string]))
 
-(def ^:private default-text-for-unfocused-input "0.00")
+(def ^:private default-text-for-unfocused-input "0")
 (def ^:private swap-proposal-debounce-time-ms 1000)
 
 (defn- on-close
