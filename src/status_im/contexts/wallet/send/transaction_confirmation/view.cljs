@@ -249,6 +249,17 @@
             user-props                {:full-name to-address
                                        :address   (utils/get-shortened-address
                                                    to-address)}]
+        ;; In token send flow we already have transaction built when
+        ;; we reach confirmation screen. But in send collectible flow
+        ;; routes request happens at the same time with navigation to
+        ;; confirmation screen. So we need to build the transaction as soon
+        ;; as route is available.
+        (rn/use-effect
+         (fn []
+           (when (and (send-utils/tx-type-collectible? transaction-type)
+                      first-route)
+             (rf/dispatch [:wallet/build-transaction-for-collectible-route])))
+         [first-route])
         [rn/view {:style {:flex 1}}
          [floating-button-page/view
           {:footer-container-padding 0
