@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 from time import sleep
 
 import dateutil.parser
+import pytest
+from appium.webdriver.common.appiumby import AppiumBy
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, StaleElementReferenceException, \
     InvalidElementStateException
 from selenium.webdriver import ActionChains
@@ -232,11 +234,14 @@ class ChatElementByText(Text):
     def replied_message_text(self):
         class RepliedMessageText(Text):
             def __init__(self, driver, parent_locator: str):
-                super().__init__(driver, prefix=parent_locator,
-                                 xpath="/preceding::android.widget.TextView[@content-desc='quoted-message']")
+                super().__init__(driver,
+                                 # prefix=parent_locator,
+                                 # xpath="/preceding::android.widget.TextView[@content-desc='quoted-message']"
+                                 accessibility_id='quoted-message')
 
         try:
-            return RepliedMessageText(self.driver, self.message_locator).text
+            # return RepliedMessageText(self.driver, self.message_locator).text
+            return self.find_element().find_element(by=AppiumBy.ACCESSIBILITY_ID, value='quoted-message').text
         except NoSuchElementException:
             return ''
 
@@ -1011,13 +1016,13 @@ class ChatView(BaseView):
     def pin_message(self, message, action="pin"):
         self.driver.info("Looking for message '%s' pin" % message)
         element = self.element_by_translation_id(action)
-        self.chat_element_by_text(message).long_press_until_element_is_shown(element)
+        self.chat_element_by_text(message).long_press_without_release()
         element.click_until_absense_of_element(element)
 
     def edit_message_in_chat(self, message_to_edit, message_to_update):
         self.driver.info("Looking for message '%s' to edit it" % message_to_edit)
-        self.chat_element_by_text(message_to_edit).message_body.long_press_element()
-        self.element_by_translation_id("edit-message").click()
+        self.chat_element_by_text(message_to_edit).message_body.long_press_without_release()
+        self.element_by_translation_id("edit-message").double_click()
         self.chat_message_input.clear()
         self.chat_message_input.send_keys(message_to_update)
         self.send_message_button.click()
@@ -1028,40 +1033,36 @@ class ChatView(BaseView):
             delete_button = self.element_by_translation_id("delete-for-everyone")
         else:
             delete_button = self.element_by_translation_id("delete-for-me")
-        self.chat_element_by_text(message).message_body.long_press_element()
-        delete_button.click()
+        self.chat_element_by_text(message).message_body.long_press_without_release()
+        delete_button.double_click()
 
     def copy_message_text(self, message_text):
         self.driver.info("Copying '%s' message via long press" % message_text)
         self.chat_element_by_text(message_text).wait_for_visibility_of_element()
-        self.chat_element_by_text(message_text).long_press_element()
-        self.element_by_translation_id("copy-text").click()
+        self.chat_element_by_text(message_text).long_press_without_release()
+        self.element_by_translation_id("copy-text").double_click()
 
     def quote_message(self, message: str):
         self.driver.info("Quoting '%s' message" % message)
         element = self.chat_element_by_text(message)
         element.wait_for_sent_state()
-        element.long_press_until_element_is_shown(self.reply_message_button)
-        self.reply_message_button.click()
+        element.long_press_without_release()
+        self.reply_message_button.double_click()
 
-    def set_reaction(self, message: str, emoji: str = 'thumbs-up', emoji_message=False):
+    def set_reaction(self, message: str, emoji: str = 'thumbs-up', emoji_message: bool = False,
+                     times_to_long_press: int = 1):
         self.driver.info("Setting '%s' reaction" % emoji)
-        # Audio message is obvious should be tapped not on audio-scroll-line
-        # so we tap on its below element as exception here (not the case for link/tag message!)
         element = Button(self.driver, accessibility_id='reaction-%s' % emoji)
-        if message == 'audio':
-            self.audio_message_in_chat_timer.long_press_element()
+        if emoji_message:
+            self.element_by_text_part(message).long_press_without_release()
         else:
-            if not emoji_message:
-                self.chat_element_by_text(message).long_press_until_element_is_shown(element)
-            else:
-                self.element_by_text_part(message).long_press_until_element_is_shown(element)
-        # old UI
-        # element = Button(self.driver, accessibility_id='pick-emoji-%s' % key)
-        element.click()
+            for _ in range(times_to_long_press):
+                self.chat_element_by_text(message).long_press_without_release()
+        element.wait_for_element()
+        element.double_click()
         element.wait_for_invisibility_of_element()
 
-    def add_remove_same_reaction(self, message: str, emoji: str = 'thumbs-up'):
+    def add_remove_same_reaction(self, emoji: str = 'thumbs-up'):
         self.driver.info("Adding one more '%s' reaction or removing an added one" % emoji)
         key = emojis[emoji]
         element = Button(self.driver, accessibility_id='emoji-reaction-%s' % key)
@@ -1212,7 +1213,11 @@ class ChatView(BaseView):
         self.show_images_button.click()
         self.allow_button.click_if_shown()
         self.allow_all_button.click_if_shown()
-        [self.get_image_by_index(i).click() for i in indexes]
+        try:
+            [self.get_image_by_index(i).click() for i in indexes]
+        except NoSuchElementException:
+            self.click_system_back_button()
+            pytest.fail("Can't send image(s) with index(es) %s" % indexes)
         self.images_confirm_selection_button.click()
         self.chat_message_input.send_keys(description)
         self.send_message_button.click()

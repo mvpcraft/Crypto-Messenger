@@ -438,7 +438,7 @@ class ProfileView(BaseView):
 
     def edit_profile_picture(self, image_index: int, update_by="Gallery"):
         self.driver.info("## Setting custom profile image", device=False)
-        if not AbstractTestCase().environment == 'sauce':
+        if not AbstractTestCase().environment == 'lt':
             raise NotImplementedError('Test case is implemented to run on SauceLabs only')
         self.edit_profile_button.click()
         self.change_profile_photo_button.click()
@@ -473,6 +473,7 @@ class ProfileView(BaseView):
         try:
             image_element.find_elements()[image_index].click()
         except IndexError:
+            self.click_system_back_button(times=2)
             raise NoSuchElementException("Image with index %s was not found" % image_index) from None
 
     def logout(self):

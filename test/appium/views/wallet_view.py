@@ -163,8 +163,8 @@ class WalletView(BaseView):
 
     def send_asset_from_drawer(self, address: str, asset_name: str, amount: float, network_name: str):
         asset_element = self.get_asset(asset_name)
-        asset_element.long_press_element()
-        self.send_from_drawer_button.click()
+        asset_element.long_press_without_release()
+        self.send_from_drawer_button.double_click()
         self.select_network(network_name)
         self.address_text_input.send_keys(address)
         self.continue_button.click()
@@ -217,8 +217,8 @@ class WalletView(BaseView):
                 checkbox.click()
             self.element_by_translation_id("reveal-phrase").click()
             # ToDo: can't be done in current small size emulators, add when moved to LambdaTest
-        self.slide_and_confirm_with_password()
         derivation_path = self.add_account_derivation_path_text.text
+        self.slide_and_confirm_with_password()
         return derivation_path.replace(' ', '')
 
     def get_account_address(self):

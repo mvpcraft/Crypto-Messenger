@@ -199,6 +199,7 @@ class TestFallbackMultipleDevice(MultipleSharedDeviceTestCase):
         self.profile_2.click_system_back_button(times=4)
 
         wallet_2.just_fyi("Device 2: import key pair")
+        wallet_2.get_account_element(account_name=regular_account_name).swipe_left_on_element()
         wallet_2.get_account_element(account_name=key_pair_account_name).click()
         wallet_2.element_by_translation_id("import-key-pair").click()
         self.sign_in_2.passphrase_edit_box.send_keys(account_to_add['passphrase'])
@@ -271,7 +272,7 @@ class TestFallbackMultipleDevice(MultipleSharedDeviceTestCase):
         self.sign_in_2.continue_button.click()
         if not self.sign_in_2.password_input.is_element_displayed():
             self.errors.append("Can't recover an access with a valid passphrase")
-        self.sign_in_2.click_system_back_button()
+        self.sign_in_2.click_system_back_button(times=2)
 
         self.sign_in_2.just_fyi("Device 2: try recovering an account which is already synced")
         self.sign_in_2.passphrase_edit_box.clear()

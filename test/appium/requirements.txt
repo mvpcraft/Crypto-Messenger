@@ -17,6 +17,7 @@ eth-account==0.7.0
 eth-hash==0.3.2
 eth-keys
 execnet==1.7.1
+filelock==3.16.1
 flaky==3.7.0
 future==0.18.2
 hexbytes==0.2.2

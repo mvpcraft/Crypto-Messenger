@@ -545,8 +545,8 @@ class HomeView(BaseView):
 
     def delete_chat_long_press(self, username):
         self.driver.info("Deleting chat '%s' by long press" % username)
-        self.get_chat(username).long_press_element()
-        self.close_chat_button.click()
+        self.get_chat(username).long_press_without_release()
+        self.close_chat_button.double_click()
         self.confirm_closing_chat_button.click()
 
     def leave_chat_long_press(self, username):
@@ -565,13 +565,15 @@ class HomeView(BaseView):
 
     def mute_chat_long_press(self, chat_name, mute_period="mute-till-unmute", community=False, community_channel=False):
         self.driver.info("Muting chat with %s" % chat_name)
-        self.get_chat(username=chat_name, community=community, community_channel=community_channel).long_press_element()
+        self.get_chat(username=chat_name, community=community,
+                      community_channel=community_channel).long_press_without_release()
         if community:
-            self.mute_community_button.click()
+            element = self.mute_community_button
         elif community_channel:
-            self.mute_channel_button.click()
+            element = self.mute_channel_button
         else:
-            self.mute_chat_button.click()
+            element = self.mute_chat_button
+        element.double_click()
         self.element_by_translation_id(mute_period).click()
 
     def get_pn(self, pn_text: str):
@@ -587,9 +589,24 @@ class HomeView(BaseView):
 
     def get_link_to_profile(self):
         self.show_qr_code_button.click()
+        try:
+            element = self.link_to_profile_button.find_element()
+        except NoSuchElementException:
+            element = None
+            pass
         self.share_profile_tab_button.click()
-        self.link_to_profile_button.click()
-        link_to_profile = self.sharing_text_native.text
+        if element:
+            self.wait_for_staleness_of_element(element)
+        for _ in range(3):
+            try:
+                self.link_to_profile_button.click()
+                link_to_profile = self.sharing_text_native.text
+                break
+            except NoSuchElementException:
+                link_to_profile = ""
+                continue
+        if not link_to_profile:
+            raise NoSuchElementException("Can't get link to profile")
         self.click_system_back_button()
         return link_to_profile
 

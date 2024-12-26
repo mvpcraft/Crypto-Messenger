@@ -1,5 +1,5 @@
 from tests import marks, pytest_config_global, test_dapp_name
-from tests.base_test_case import SingleDeviceTestCase, MultipleDeviceTestCase
+from tests.base_test_case import SingleDeviceTestCase, MultipleSharedDeviceTestCase
 from tests.users import upgrade_users, transaction_recipients, basic_user, ens_user, transaction_senders
 from views.sign_in_view import SignInView
 import views.dbs.chats.data as chat_data
@@ -245,7 +245,7 @@ class TestUpgradeApplication(SingleDeviceTestCase):
 
 
 @marks.upgrade
-class TestUpgradeMultipleApplication(MultipleDeviceTestCase):
+class TestUpgradeMultipleApplication(MultipleSharedDeviceTestCase):
 
     @marks.testrail_id(695783)
     def test_commands_audio_backward_compatibility_upgrade(self):

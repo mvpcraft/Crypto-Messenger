@@ -111,9 +111,9 @@ pipeline {
             passwordVariable: 'TESTRAIL_PASS'
           ),
           usernamePassword(
-            credentialsId:  'sauce-labs-api',
-            usernameVariable: 'SAUCE_USERNAME',
-            passwordVariable: 'SAUCE_ACCESS_KEY'
+            credentialsId:  'lambda-test-api',
+            usernameVariable: 'LAMBDA_TEST_USERNAME',
+            passwordVariable: 'LAMBDA_TEST_ACCESS_KEY'
           ),
           string(
             credentialsId: 'etherscan-api-key',
@@ -134,7 +134,6 @@ pipeline {
             sh """
               python3 -m pytest \
                 --numprocesses 8 \
-                --rerun_count=2 \
                 --testrail_report=True \
                 -k \"${params.KEYWORD_EXPRESSION}\" \
                 --apk=${params.APK_URL ?: apk_path} \
