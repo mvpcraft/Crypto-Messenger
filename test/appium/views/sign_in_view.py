@@ -5,33 +5,6 @@ from views.base_element import Button, EditBox, Text
 from views.base_view import BaseView
 
 
-class MultiAccountButton(Button):
-    class Username(Text):
-        def __init__(self, driver, locator_value):
-            super(MultiAccountButton.Username, self).__init__(
-                driver,
-                xpath="%s//android.widget.TextView[@content-desc='username']" % locator_value)
-
-    def __init__(self, driver, position=1):
-        super(MultiAccountButton, self).__init__(driver,
-                                                 xpath="//*[@content-desc='select-account-button-%s']" % position)
-        self.username = self.Username(driver, self.locator)
-
-
-class MultiAccountOnLoginButton(Button):
-    def __init__(self, driver, position=1):
-        super(MultiAccountOnLoginButton, self).__init__(driver,
-                                                        xpath="(//*[@content-desc='chat-icon'])[%s]/.." % position)
-
-    @property
-    def account_logo(self):
-        class AccountLogo(Text):
-            def __init__(self, driver, parent_locator: str):
-                super().__init__(driver, xpath="%s//*[@content-desc='chat-icon']" % parent_locator)
-
-        return AccountLogo(self.driver, self.locator)
-
-
 class LogInButton(Button):
     def __init__(self, driver):
         super().__init__(driver, accessibility_id="login-button")
@@ -65,8 +38,6 @@ class SignInView(BaseView):
         self.driver = driver
 
         # intro screen
-        self.i_m_new_in_status_button = Button(self.driver, accessibility_id="new-to-status-button")
-
         self.explore_new_status_button = Button(self.driver, accessibility_id="explore-new-status")
         self.create_profile_button = Button(self.driver, accessibility_id='new-to-status-button')
         self.log_in_button = Button(self.driver, accessibility_id='log-in')
@@ -79,7 +50,6 @@ class SignInView(BaseView):
 
         # migrate multiaccount
         self.options_button = Button(self.driver, xpath="//androidx.appcompat.widget.LinearLayoutCompat")
-        self.manage_keys_and_storage_button = Button(self.driver, accessibility_id="manage-keys-and-storage-button")
 
         # New onboarding
         self.start_fresh_lets_go_button = Button(self.driver, accessibility_id="start-fresh-main-card")
@@ -175,4 +145,3 @@ class SignInView(BaseView):
             return expected_element
         else:
             raise NoSuchElementException(msg="User %s is not found!" % username)
-

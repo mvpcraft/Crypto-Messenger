@@ -2,7 +2,6 @@ import asyncio
 import base64
 import logging
 import re
-import subprocess
 import sys
 from abc import ABCMeta, abstractmethod
 from http.client import RemoteDisconnected
@@ -17,7 +16,7 @@ from selenium.common.exceptions import NoSuchElementException, WebDriverExceptio
 from urllib3.exceptions import MaxRetryError, ProtocolError
 
 from support.api.network_api import NetworkApi
-from tests import test_suite_data, start_threads, appium_container, pytest_config_global, transl
+from tests import test_suite_data, start_threads, pytest_config_global, transl
 from tests.conftest import github_report, run_name, lambda_test_username, lambda_test_access_key
 
 executor_lambda_test = 'https://%s:%s@mobile-hub.lambdatest.com/wd/hub' % (lambda_test_username, lambda_test_access_key)
@@ -25,38 +24,6 @@ executor_lambda_test = 'https://%s:%s@mobile-hub.lambdatest.com/wd/hub' % (lambd
 executor_local = 'http://localhost:4723/wd/hub'
 
 implicit_wait = 5
-
-
-def get_capabilities_local():
-    desired_caps = dict()
-    if pytest_config_global['docker']:
-        # apk is in shared volume directory
-        apk = '/root/shared_volume/%s' % pytest_config_global['apk']
-    else:
-        apk = pytest_config_global['apk']
-    desired_caps['app'] = apk
-    desired_caps['deviceName'] = 'nexus_5'
-    desired_caps['platformName'] = 'Android'
-    desired_caps['appiumVersion'] = '1.9.1'
-    desired_caps['platformVersion'] = '10.0'
-    desired_caps['newCommandTimeout'] = 600
-    desired_caps['fullReset'] = False
-    desired_caps['unicodeKeyboard'] = True
-    desired_caps['automationName'] = 'UiAutomator2'
-    desired_caps['setWebContentDebuggingEnabled'] = True
-    return desired_caps
-
-
-def add_local_devices_to_capabilities():
-    updated_capabilities = list()
-    raw_out = re.split(r'[\r\\n]+', str(subprocess.check_output(['adb', 'devices'])).rstrip())
-    for line in raw_out[1:]:
-        serial = re.findall(r"(([\d.\d:]*\d+)|\bemulator-\d+)", line)
-        if serial:
-            capabilities = get_capabilities_local()
-            capabilities['udid'] = serial[0][0]
-            updated_capabilities.append(capabilities)
-    return updated_capabilities
 
 
 def get_lambda_test_capabilities_real_device():
@@ -209,139 +176,39 @@ class Errors(object):
             pytest.fail('\n '.join([self.errors.pop(0) for _ in range(len(self.errors))]))
 
 
-class SingleDeviceTestCase(AbstractTestCase):
-
-    def setup_method(self, method, **kwargs):
-        if pytest_config_global['docker']:
-            appium_container.start_appium_container(pytest_config_global['docker_shared_volume'])
-            appium_container.connect_device(pytest_config_global['device_ip'])
-
-        # (executor, capabilities) = (executor_sauce_lab, get_capabilities_sauce_lab()) if \
-        #     self.environment == 'sauce' else (executor_local, get_capabilities_local())
-        # for key, value in kwargs.items():
-        #     capabilities[key] = value
-        # self.driver = Driver(executor, capabilities)
-        test_suite_data.current_test.testruns[-1].jobs[self.driver.session_id] = 1
-        self.driver.implicitly_wait(implicit_wait)
-        self.errors = Errors()
-
-        if pytest_config_global['docker']:
-            appium_container.reset_battery_stats()
-
-    def teardown_method(self, method):
-        if self.environment == 'sauce':
-            self.print_lt_session_info(self.driver)
-        try:
-            self.add_alert_text_to_report(self.driver)
-            geth_content = pull_geth(self.driver)
-            self.driver.quit()
-            if pytest_config_global['docker']:
-                appium_container.stop_container()
-        except (WebDriverException, AttributeError):
-            pass
-        finally:
-            github_report.save_test(test_suite_data.current_test,
-                                    {'%s_geth.log' % test_suite_data.current_test.name: geth_content})
-
-
-class LocalMultipleDeviceTestCase(AbstractTestCase):
-
-    def setup_method(self, method):
-        self.drivers = dict()
-        self.errors = Errors()
-
-    def create_drivers(self, quantity):
-        capabilities = self.add_local_devices_to_capabilities()
-        for driver in range(quantity):
-            self.drivers[driver] = Driver(self.executor_local, capabilities[driver])
-            test_suite_data.current_test.testruns[-1].jobs[self.drivers[driver].session_id] = driver + 1
-            self.drivers[driver].implicitly_wait(self.implicitly_wait)
-
-    def teardown_method(self, method):
-        for driver in self.drivers:
-            try:
-                self.add_alert_text_to_report(self.drivers[driver])
-                self.drivers[driver].quit()
-            except WebDriverException:
-                pass
-
-
 def create_shared_drivers(quantity):
     drivers = dict()
-    if pytest_config_global['env'] == 'local':
-        capabilities = add_local_devices_to_capabilities()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    print('LT Executor: %s' % executor_lambda_test)
+    try:
+        drivers = loop.run_until_complete(start_threads(test_suite_data.current_test.name,
+                                                        quantity,
+                                                        Driver,
+                                                        drivers,
+                                                        command_executor=executor_lambda_test,
+                                                        options=get_lambda_test_capabilities_emulator()))
+        if len(drivers) < quantity:
+            test_suite_data.current_test.testruns[-1].error = "Not all %s drivers are created" % quantity
+
         for i in range(quantity):
-            driver = Driver(executor_local, capabilities[i])
-            test_suite_data.current_test.testruns[-1].jobs[driver.session_id] = i + 1
-            driver.implicitly_wait(implicit_wait)
-            drivers[i] = driver
-        loop = None
+            test_suite_data.current_test.testruns[-1].jobs[drivers[i].session_id] = i + 1
+            drivers[i].implicitly_wait(implicit_wait)
+            drivers[i].update_settings({"enforceXPath1": True})
+            drivers[i].set_network_connection(ConnectionType.WIFI_ONLY)
         return drivers, loop
-    else:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        print('LT Executor: %s' % executor_lambda_test)
-        try:
-            drivers = loop.run_until_complete(start_threads(test_suite_data.current_test.name,
-                                                            quantity,
-                                                            Driver,
-                                                            drivers,
-                                                            command_executor=executor_lambda_test,
-                                                            options=get_lambda_test_capabilities_emulator()))
-            if len(drivers) < quantity:
-                test_suite_data.current_test.testruns[-1].error = "Not all %s drivers are created" % quantity
-
-            for i in range(quantity):
-                test_suite_data.current_test.testruns[-1].jobs[drivers[i].session_id] = i + 1
-                drivers[i].implicitly_wait(implicit_wait)
-                drivers[i].update_settings({"enforceXPath1": True})
-                drivers[i].set_network_connection(ConnectionType.WIFI_ONLY)
-            return drivers, loop
-        except (MaxRetryError, AttributeError) as e:
-            test_suite_data.current_test.testruns[-1].error = str(e)
-            for i, driver in drivers.items():
-                try:
-                    driver.update_lt_session_status(i + 1, "failed")
-                    driver.quit()
-                except (WebDriverException, AttributeError):
-                    pass
-            raise e
-
-
-class LocalSharedMultipleDeviceTestCase(AbstractTestCase):
-
-    def setup_method(self, method):
-        jobs = test_suite_data.current_test.testruns[-1].jobs
-        if not jobs:
-            for index, driver in self.drivers.items():
-                jobs[driver.session_id] = index + 1
-        self.errors = Errors()
-
-    def teardown_method(self, method):
-        for driver in self.drivers:
+    except (MaxRetryError, AttributeError) as e:
+        test_suite_data.current_test.testruns[-1].error = str(e)
+        for i, driver in drivers.items():
             try:
-                self.add_alert_text_to_report(self.drivers[driver])
-            except WebDriverException:
+                driver.update_lt_session_status(i + 1, "failed")
+                driver.quit()
+            except (WebDriverException, AttributeError):
                 pass
-
-    @pytest.fixture(scope='class', autouse=True)
-    def prepare(self, request):
-        try:
-            request.cls.prepare_devices(request)
-        finally:
-            for item, value in request.__dict__.items():
-                setattr(request.cls, item, value)
-
-    @classmethod
-    def teardown_class(cls):
-        for driver in cls.drivers:
-            try:
-                cls.drivers[driver].quit()
-            except WebDriverException:
-                pass
+        raise e
 
 
-class LambdaTestSharedMultipleDeviceTestCase(AbstractTestCase):
+class MultipleSharedDeviceTestCase(AbstractTestCase):
 
     def setup_method(self, method):
         if not self.drivers:
@@ -440,18 +307,3 @@ class LambdaTestSharedMultipleDeviceTestCase(AbstractTestCase):
             if group_setup_failed:
                 test.logs_paths = logs_paths
             github_report.save_test(test)
-
-
-if pytest_config_global['env'] == 'local':
-    MultipleSharedDeviceTestCase = LocalSharedMultipleDeviceTestCase
-else:
-    MultipleSharedDeviceTestCase = LambdaTestSharedMultipleDeviceTestCase
-
-
-class NoDeviceTestCase(AbstractTestCase):
-
-    def setup_method(self, method, **kwargs):
-        pass
-
-    def teardown_method(self, method):
-        github_report.save_test(test_suite_data.current_test)

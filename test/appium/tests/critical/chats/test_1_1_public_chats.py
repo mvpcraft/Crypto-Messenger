@@ -145,7 +145,6 @@ class TestOneToOneChatMultipleSharedDevicesNewUi(MultipleSharedDeviceTestCase):
         url_message = 'Test with link: https://status.im/ here should be nothing unusual.'
         self.chat_1.send_message(url_message)
         self.chat_2.chat_element_by_text(url_message).wait_for_element(60)
-        # self.chat_2.chat_element_by_text(url_message).long_press_element_by_coordinate(rel_x=0.8, rel_y=0.8)
         self.chat_2.quote_message(url_message)
         self.chat_2.send_message(reply)
         replied_message = self.chat_1.chat_element_by_text(reply)
@@ -166,11 +165,17 @@ class TestOneToOneChatMultipleSharedDevicesNewUi(MultipleSharedDeviceTestCase):
         chat_element = self.chat_2.chat_element_by_text(url_to_open)
         if chat_element.is_element_displayed(120):
             chat_element.click_on_link_inside_message_body()
-            web_view = self.chat_2.open_in_status_button.click()
-            text_element = web_view.element_by_text("a free (libre) open source, mobile OS for Ethereum")
-            sign_in_button = Button(self.chat_2.driver, xpath="//android.view.View[@content-desc='Sign in']")
-            if not text_element.is_element_displayed(30) or not sign_in_button.is_element_displayed(30):
+            self.chat_2.open_in_android_button.click()
+            try:
+                self.chat_2.wait_for_current_package_to_be('com.android.chrome')
+            except TimeoutException:
                 self.errors.append('URL was not opened from 1-1 chat')
+            else:
+                self.chat_2.element_by_text("No thanks").click_if_shown()
+                text_element = self.chat_2.element_by_text("a free (libre) open source, mobile OS for Ethereum")
+                sign_in_button = Button(self.chat_2.driver, xpath="//android.view.View[@content-desc='Sign in']")
+                if not text_element.is_element_displayed() or not sign_in_button.is_element_displayed():
+                    self.errors.append('URL was not opened from 1-1 chat')
         else:
             self.errors.append("Message with URL was not received")
 

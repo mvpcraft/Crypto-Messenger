@@ -4,6 +4,7 @@ import time
 import pytest
 from _pytest.outcomes import Failed
 from selenium.common import TimeoutException, NoSuchElementException
+
 from base_test_case import MultipleSharedDeviceTestCase, create_shared_drivers
 from support.api.network_api import NetworkApi
 from tests import marks, run_in_parallel

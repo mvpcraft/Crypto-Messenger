@@ -2,7 +2,6 @@ import base64
 import os
 import time
 from io import BytesIO
-from timeit import timeit
 
 import emoji
 import imagehash
@@ -261,11 +260,6 @@ class BaseElement(object):
         screen = Image.open(BytesIO(base64.b64decode(self.find_element().screenshot_as_base64)))
         screen.save(full_path_to_file)
 
-    def is_element_image_equals_template(self, file_name: str = ''):
-        if file_name:
-            self.template = file_name
-        return not ImageChops.difference(self.image, self.template).getbbox()
-
     def is_element_differs_from_template(self, file_name: str = '', diff: int = 0):
         if file_name:
             self.template = file_name
@@ -348,18 +342,6 @@ class BaseElement(object):
         action = ActionChains(self.driver)
         action.move_to_element_with_offset(to_element=element, xoffset=x, yoffset=y).click_and_hold().perform()
         action.release(element).perform()
-
-    def measure_time_before_element_appears(self, max_wait_time=30):
-        def wrapper():
-            return self.wait_for_visibility_of_element(max_wait_time)
-
-        return timeit(wrapper, number=1)
-
-    def measure_time_while_element_is_shown(self, max_wait_time=30):
-        def wrapper():
-            return self.wait_for_invisibility_of_element(max_wait_time)
-
-        return timeit(wrapper, number=1)
 
     def click_inside_element_by_coordinate(self, rel_x=0.8, rel_y=0.8, times_to_click=1):
         location, size = self.get_element_coordinates()

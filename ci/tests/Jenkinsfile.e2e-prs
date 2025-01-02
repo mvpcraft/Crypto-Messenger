@@ -133,7 +133,7 @@ pipeline {
             sh 'cp -f $TEST_ETH_ACCOUNTS_FILE users.py'
             sh """
               python3 -m pytest \
-                --numprocesses 8 \
+                --numprocesses 9 \
                 --testrail_report=True \
                 -k \"${params.KEYWORD_EXPRESSION}\" \
                 --apk=${params.APK_URL ?: apk_path} \

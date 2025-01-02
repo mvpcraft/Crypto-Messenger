@@ -1,9 +1,8 @@
-
 from appium.webdriver.common.mobileby import MobileBy
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from typing_extensions import Literal
 
-from views.base_element import Button, Text, BaseElement, SilentButton, CheckBox, EditBox
+from views.base_element import Button, Text, BaseElement, SilentButton
 from views.base_view import BaseView, UnreadMessagesCountText
 
 
@@ -342,15 +341,6 @@ class HomeView(BaseView):
         # Discover communities
         self.community_card_item = BaseElement(self.driver, accessibility_id="community-card-item")
 
-    def wait_for_syncing_complete(self):
-        self.driver.info('Waiting for syncing to complete')
-        while True:
-            try:
-                sync = self.element_by_text_part('Syncing').wait_for_element(10)
-                self.driver.info(sync.text)
-            except TimeoutException:
-                break
-
     def get_activity_center_element_by_text(self, text_part):
         return ActivityCenterElement(self.driver, text_part)
 
@@ -410,10 +400,6 @@ class HomeView(BaseView):
             self.close_activity_centre.wait_for_rendering_ended_and_click()
             self.chats_tab.wait_for_visibility_of_element()
 
-    def get_username_below_start_new_chat_button(self, username_part):
-        return Text(self.driver,
-                    xpath="//*[@content-desc='enter-contact-code-input']/../..//*[starts-with(@text,'%s')]" % username_part)
-
     def add_contact(self, public_key, nickname='', remove_from_contacts=False):
         self.driver.info("Adding user to Contacts via chats > add new contact")
         self.new_chat_button.click_until_presence_of_element(self.add_a_contact_chat_bottom_sheet_button)
@@ -464,28 +450,11 @@ class HomeView(BaseView):
         else:
             raise ValueError("Incorrect community type is set")
 
-    def import_community(self, key):
-        self.driver.info("## Importing community")
-        import_button = Button(self.driver, translation_id="import")
-        self.plus_button.click()
-        chat_view = self.communities_button.click()
-        chat_view.chat_options.click()
-        chat_view.element_by_translation_id("import-community").wait_and_click()
-        EditBox(self.driver, xpath="//android.widget.EditText").send_keys(key)
-        import_button.click_until_absense_of_element(import_button)
-
     def delete_chat_long_press(self, username):
         self.driver.info("Deleting chat '%s' by long press" % username)
         self.get_chat(username).long_press_without_release()
         self.close_chat_button.double_click()
         self.confirm_closing_chat_button.click()
-
-    def leave_chat_long_press(self, username):
-        self.driver.info("Leaving chat '%s' by long press" % username)
-        self.get_chat(username).long_press_element()
-        from views.chat_view import ChatView
-        ChatView(self.driver).leave_chat_button.click()
-        ChatView(self.driver).leave_button.click()
 
     def clear_chat_long_press(self, username):
         self.driver.info("Clearing history in chat '%s' by long press" % username)
@@ -551,14 +520,6 @@ class HomeView(BaseView):
     def copy_wallet_address(self):
         self.share_link_to_profile_button.click()
         address = self.sharing_text_native.text
-        self.click_system_back_button()
-        return address
-
-    def get_wallet_address(self):
-        self.show_qr_code_button.click()
-        self.share_wallet_tab_button.click()
-        self.account_avatar.wait_for_visibility_of_element()
-        address = self.copy_wallet_address()
         self.click_system_back_button()
         return address
 

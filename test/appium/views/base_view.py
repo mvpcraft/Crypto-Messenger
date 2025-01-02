@@ -1,9 +1,6 @@
-import base64
 import random
-import re
 import string
 import time
-from datetime import datetime
 
 from appium.webdriver import WebElement
 from appium.webdriver.applicationstate import ApplicationState
@@ -11,7 +8,6 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
 
-from support.device_apps import start_web_browser
 from tests import common_password, transl
 from views.base_element import Button, BaseElement, EditBox, Text, CheckBox
 
@@ -72,6 +68,7 @@ class WalletTab(TabButton):
         from views.wallet_view import WalletView
         return WalletView(self.driver)
 
+
 class BrowserTab(TabButton):
     def __init__(self, driver):
         super().__init__(driver, accessibility_id="browser-stack-tab")
@@ -100,28 +97,6 @@ class ProfileButton(TabButton):
 class SendMessageButton(Button):
     def __init__(self, driver):
         super().__init__(driver, accessibility_id="send-message-button")
-
-
-class OpenInStatusButton(Button):
-    def __init__(self, driver):
-        super().__init__(driver, translation_id="browsing-open-in-status")
-
-    def click(self):
-        self.wait_for_visibility_of_element()
-        # using sleep is wrong, but implicit wait for element can't help in particular case
-        time.sleep(3)
-        self.swipe_to_web_element()
-        self.wait_for_element().click()
-
-
-class SignInPhraseText(Text):
-    def __init__(self, driver):
-        super().__init__(driver, translation_id="this-is-you-signing",
-                         suffix="//following-sibling::*[2]/android.widget.TextView")
-
-    @property
-    def list(self):
-        return self.text.split()
 
 
 class SlideButton(Button):
@@ -179,7 +154,6 @@ class BaseView(object):
         self.status_in_background_button = Button(self.driver, xpath="//*[contains(@content-desc,'Status')]")
         self.cancel_button = Button(self.driver, translation_id="cancel", uppercase=True)
         self.search_input = EditBox(self.driver, accessibility_id="search-input")
-        self.sign_in_phrase = SignInPhraseText(self.driver)
         self.toast_content_element = BaseElement(self.driver, accessibility_id="toast-content")
         self.next_button = Button(self.driver, accessibility_id="next-button")
         self.native_alert_title = Text(self.driver, xpath="//*[@resource-id='android:id/alertTitle']")
@@ -196,7 +170,7 @@ class BaseView(object):
         self.slide_button_track = SlideButton(self.driver)
 
         # external browser
-        self.open_in_status_button = OpenInStatusButton(self.driver)
+        self.open_in_android_button = Button(self.driver, translation_id="browsing-open-in-android-web-browser")
 
         self.element_types = {
             'base': BaseElement,
@@ -208,19 +182,6 @@ class BaseView(object):
     @staticmethod
     def get_translation_by_key(translation_id):
         return transl[translation_id]
-
-    def close_native_device_dialog(self, alert_text_part):
-        element = self.element_by_text_part(alert_text_part)
-        if element.is_element_displayed(1):
-            self.driver.info("Closing '%s' alert..." % alert_text_part)
-            self.native_close_button.click()
-
-    @property
-    def logcat(self):
-        logcat = self.driver.get_log("logcat")
-        if len(logcat) > 1000:
-            return str([i for i in logcat if not ('appium' in str(i).lower() or ':1.000000.' in str(i).lower())])
-        raise TimeoutError('Logcat is empty')
 
     def confirm(self):
         self.driver.info("Tap 'Confirm' on native keyboard")
@@ -312,11 +273,6 @@ class BaseView(object):
         element = self.element_types[element_type](self.driver, translation_id=translation_id, uppercase=uppercase)
         return element
 
-    def pull_to_refresh(self, wait_sec=20):
-        self.driver.info("Pull to refresh view")
-        self.driver.swipe(500, 500, 500, 1000)
-        time.sleep(wait_sec)
-
     def get_dapp_view(self):
         from views.dapps_view import DappsView
         return DappsView(self.driver)
@@ -349,35 +305,9 @@ class BaseView(object):
         from views.wallet_view import WalletView
         return WalletView(self.driver)
 
-
-    @staticmethod
-    def get_unique_amount():
-        return '0.000%s' % datetime.now().strftime('%-d%-H%-M%-S').strip('0')
-
     @staticmethod
     def get_random_chat_name():
         return ''.join(random.choice(string.ascii_lowercase) for _ in range(7))
-
-    @staticmethod
-    def get_random_message():
-        message = 'test message:'
-        return message + ''.join(random.choice(string.ascii_lowercase) for _ in range(10))
-
-    def get_back_to_home_view(self, times_to_click_on_back_btn=3):
-        counter = 0
-        while self.back_button.is_element_displayed(2) or self.navigate_up_button.is_element_displayed(2):
-            try:
-                if counter >= times_to_click_on_back_btn:
-                    break
-                if self.back_button.is_element_displayed(2):
-                    self.back_button.click_until_absense_of_element(self.back_button)
-                else:
-                    self.navigate_up_button.click_until_absense_of_element(self.navigate_up_button)
-                counter += 1
-            except (NoSuchElementException, TimeoutException):
-                continue
-        return self
-
 
     def click_on_floating_jump_to(self):
         self.hide_keyboard_if_shown()
@@ -391,18 +321,6 @@ class BaseView(object):
                                        self.jump_to_button.accessibility_id)).click()
         else:
             self.jump_to_button.click()
-
-    def jump_to_messages_home(self):
-        self.click_on_floating_jump_to()
-        self.chats_tab.click()
-
-    def jump_to_communities_home(self):
-        self.click_on_floating_jump_to()
-        self.communities_tab.click()
-
-    def jump_to_card_by_text(self, text: str):
-        self.click_on_floating_jump_to()
-        self.element_by_text(text).click()
 
     def wait_for_application_to_be_running(self, app_package: str, wait_time: int = 3):
         for _ in range(wait_time):
@@ -433,55 +351,11 @@ class BaseView(object):
         element.click()
         return self.get_chat_view()
 
-    def find_values_in_logcat(self, **kwargs):
-        logcat = self.logcat
-        items_in_logcat = list()
-        for key, value in kwargs.items():
-            self.driver.info("Checking in logcat for: `%s`" % value)
-            escaped_value = re.escape(value)
-            if re.findall(r'\W%s$|\W%s\W' % (escaped_value, escaped_value), logcat):
-                items_in_logcat.append('%s in logcat!!!' % key.capitalize())
-        return items_in_logcat
-
-    def find_values_in_geth(self, *args):
-        from tests.base_test_case import pull_geth
-        b64_log = pull_geth(self.driver)
-        file = base64.b64decode(b64_log)
-        result = False
-        for value in args:
-            self.driver.info('Checking in geth for: `%s`' % value)
-            if re.findall('%s*' % value, file.decode("utf-8")):
-                self.driver.info('%s was found in geth.log' % value)
-                result = True
-        return result
-
     def open_notification_bar(self):
         self.driver.open_notifications()
 
-    def open_universal_web_link(self, deep_link):
-        start_web_browser(self.driver)
-        self.driver.info('Open web link via web browser: `%s`' % deep_link)
-        self.driver.get(deep_link)
-
-    def search_by_keyword(self, keyword):
-        self.driver.info('Search for `%s`' % keyword)
-        self.search_input.click()
-        self.search_input.send_keys(keyword)
-
-    def set_up_wallet_when_sending_tx(self):
-        self.driver.info("Setting up wallet")
-        phrase = self.sign_in_phrase.text
-        self.ok_got_it_button.wait_and_click(20)
-        return phrase
-
     def tap_by_coordinates(self, x, y):
         self.driver.tap(positions=[(x, y)])
-
-    # Method-helper
-    def write_page_source_to_file(self, full_path_to_file):
-        string_source = self.driver.page_source
-        source = open(full_path_to_file, "a+")
-        source.write(string_source)
 
     def wait_for_current_package_to_be(self, expected_package_name: str, timeout: int = 10):
         start_time = time.time()

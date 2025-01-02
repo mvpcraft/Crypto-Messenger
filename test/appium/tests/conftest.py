@@ -11,14 +11,11 @@ from os import environ
 
 import pytest
 import requests
-from _pytest.runner import runtestprotocol
 from filelock import FileLock
 from requests.exceptions import ConnectionError as c_er
 
 import tests
-from support.device_stats_db import DeviceStatsDB
-from support.test_rerun import should_rerun_test
-from tests import test_suite_data, appium_container
+from tests import test_suite_data
 
 lambda_test_username = environ.get('LAMBDA_TEST_USERNAME')
 lambda_test_access_key = environ.get('LAMBDA_TEST_ACCESS_KEY')
@@ -39,10 +36,6 @@ def pytest_addoption(parser):
                      action='store',
                      default='lt',
                      help='Specify environment: local/lt/api')
-    parser.addoption('--platform_version',
-                     action='store',
-                     default='8.0',
-                     help='Android device platform version')
     parser.addoption('--log_steps',
                      action='store',
                      default=False,
@@ -55,10 +48,6 @@ def pytest_addoption(parser):
                      action='store',
                      default=False,
                      help='boolean; For creating testrail report per run')
-    parser.addoption('--rerun_count',
-                     action='store',
-                     default=0,
-                     help='How many times tests should be re-run if failed')
     parser.addoption("--run_testrail_ids",
                      action="store",
                      metavar="NAME",
@@ -70,72 +59,10 @@ def pytest_addoption(parser):
                      default=None,
                      help='Url or local path to apk for upgrade')
 
-    # chat bot
-
-    parser.addoption('--messages_number',
-                     action='store',
-                     default=20,
-                     help='Messages number')
-    parser.addoption('--public_keys',
-                     action='store',
-                     default='',
-                     help='List of public keys for one-to-one chats')
-    parser.addoption('--running_time',
-                     action='store',
-                     default=600,
-                     help='Running time in seconds')
-    parser.addoption('--chat_name',
-                     action='store',
-                     default='test_chat',
-                     help='Public chat name')
-    parser.addoption('--device_number',
-                     action='store',
-                     default=2,
-                     help='Public chat name')
-
-    # running tests using appium docker instance
-
-    parser.addoption('--docker',
-                     action='store',
-                     default=False,
-                     help='Are you using the appium docker container to run the tests?')
-    parser.addoption('--docker_shared_volume',
-                     action='store',
-                     default=None,
-                     help='Path to a directory with .apk that will be shared with docker instance. Test reports will be also saved there')
-    parser.addoption('--device_ip',
-                     action='store',
-                     default=None,
-                     help='Android device IP address used for battery tests')
-    parser.addoption('--bugreport',
-                     action='store',
-                     default=False,
-                     help='Should generate bugreport for each test?')
-    parser.addoption('--stats_db_host',
-                     action='store',
-                     default=None,
-                     help='Host address for device stats database')
-    parser.addoption('--stats_db_port',
-                     action='store',
-                     default=8086,
-                     help='Port for device stats db')
-    parser.addoption('--stats_db_username',
-                     action='store',
-                     default=None,
-                     help='Username for device stats db')
-    parser.addoption('--stats_db_password',
-                     action='store',
-                     default=None,
-                     help='Password for device stats db')
-    parser.addoption('--stats_db_database',
-                     action='store',
-                     default='example9',
-                     help='Database name for device stats db')
-
 
 @dataclass
 class Option:
-    datacenter: str = None
+    pass
 
 
 option = Option()
@@ -182,7 +109,7 @@ def _upload_and_check_response_with_retries(apk_file_path, retries=3):
 
 
 def _download_apk(url):
-    # Absolute path adde to handle CI runs.
+    # Absolute path added to handle CI runs.
     apk_path = os.path.join(os.path.dirname(__file__), test_suite_data.apk_name)
 
     print('Downloading: %s' % url)
@@ -294,12 +221,6 @@ def pytest_unconfigure(config):
                                                     target_url=comment.html_url)
 
 
-def should_save_device_stats(config):
-    db_args = [config.getoption(option) for option in
-               ('stats_db_host', 'stats_db_port', 'stats_db_username', 'stats_db_password', 'stats_db_database')]
-    return all(db_args)
-
-
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     outcome = yield
@@ -359,27 +280,6 @@ def pytest_runtest_makereport(item, call):
                 current_test.testruns[-1].run = False
             if error:
                 current_test.testruns[-1].error = '%s [[%s]]' % (error, report.wasxfail)
-        if item.config.getoption('docker'):
-            device_stats = appium_container.get_device_stats()
-            if item.config.getoption('bugreport'):
-                appium_container.generate_bugreport(item.name)
-
-            build_name = item.config.getoption('apk')
-            # Find type of tests that are run on the device
-            if 'battery_consumption' in item.keywords._markers:
-                test_group = 'battery_consumption'
-            else:
-                test_group = None
-
-            if should_save_device_stats(item.config):
-                device_stats_db = DeviceStatsDB(
-                    item.config.getoption('stats_db_host'),
-                    item.config.getoption('stats_db_port'),
-                    item.config.getoption('stats_db_username'),
-                    item.config.getoption('stats_db_password'),
-                    item.config.getoption('stats_db_database'),
-                )
-                device_stats_db.save_stats(build_name, item.name, test_group, not report.failed, device_stats)
 
 
 def get_testrail_case_id(item):
@@ -400,15 +300,3 @@ def pytest_runtest_setup(item):
     secured = bool([mark for mark in item.iter_markers(name='secured')])
     test_suite_data.set_current_test(test_name=item.name, testrail_case_id=get_testrail_case_id(item), secured=secured)
     test_suite_data.current_test.create_new_testrun()
-
-
-def pytest_runtest_protocol(item, nextitem):
-    rerun_count = int(item.config.getoption('rerun_count'))
-    for i in range(rerun_count):
-        reports = runtestprotocol(item, nextitem=nextitem)
-        for report in reports:
-            is_in_group = [i for i in item.iter_markers(name='xdist_group')]
-            if report.failed and should_rerun_test(report.longreprtext) and not is_in_group:
-                break  # rerun
-        else:
-            return True  # no need to rerun

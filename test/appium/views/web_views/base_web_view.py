@@ -1,8 +1,7 @@
 import time
 
-from views.base_element import EditBox, Button, BaseElement
+from views.base_element import Button
 from views.base_view import BaseView
-from appium.webdriver.common.touch_action import TouchAction
 
 
 class BaseWebView(BaseView):

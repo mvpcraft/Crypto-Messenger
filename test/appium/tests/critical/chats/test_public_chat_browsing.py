@@ -561,6 +561,7 @@ class TestCommunityMultipleDeviceMerged(MultipleSharedDeviceTestCase):
         self.errors.verify_no_errors()
 
     @marks.testrail_id(702844)
+    @marks.xfail(reason="Youtube links preview is not loaded on LambdaTest emulators, needs investigation")
     def test_community_links_with_previews_github_youtube_twitter_gif_send_enable(self):
         preview_urls = {
             # TODO: disabled because of the bug in 15891
@@ -609,7 +610,12 @@ class TestCommunityMultipleDeviceMerged(MultipleSharedDeviceTestCase):
             self.home_2.just_fyi("Checking %s preview case" % key)
             url = data['url']
             self.channel_2.chat_message_input.send_keys(url)
-            self.channel_2.url_preview_composer.wait_for_element(20)
+            try:
+                self.channel_2.url_preview_composer.wait_for_element(20)
+            except TimeoutException:
+                self.errors.append("No preview is loaded for url %s" % url)
+                self.channel_2.send_message_button.click()
+                continue
             shown_title = self.channel_2.url_preview_composer_text.text
             if shown_title != data['title']:
                 self.errors.append("Preview text is not expected, it is '%s'" % shown_title)

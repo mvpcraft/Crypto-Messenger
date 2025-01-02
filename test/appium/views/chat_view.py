@@ -1,7 +1,6 @@
 import re
 import time
 from datetime import datetime, timedelta
-from time import sleep
 
 import dateutil.parser
 import pytest
@@ -14,18 +13,6 @@ from tests import emojis, common_password
 from views.base_element import Button, EditBox, Text, BaseElement, SilentButton
 from views.base_view import BaseView
 from views.home_view import HomeView
-
-
-class GroupInfoButton(Button):
-    def __init__(self, driver):
-        super().__init__(driver, translation_id="group-info")
-
-    def navigate(self):
-        return GroupChatInfoView(self.driver)
-
-    def click(self):
-        self.wait_for_element().click()
-        return self.navigate()
 
 
 class OpenInStatusButton(Button):
@@ -310,27 +297,6 @@ class UsernameCheckbox(Button):
             self.scroll_to_element(direction='up', depth=20).click()
 
 
-class GroupChatInfoView(BaseView):
-    def __init__(self, driver):
-        super().__init__(driver)
-        self.add_members = Button(self.driver, translation_id="add-members")
-
-    def get_username_options(self, username: str):
-        return UsernameOptions(self.driver, username)
-
-    def user_admin(self, username: str):
-        admin = Button(self.driver,
-                       xpath="//*[@text='%s']/..//*[@text='%s']" % (
-                           username, self.get_translation_by_key("group-chat-admin")))
-        admin.scroll_to_element()
-        return admin
-
-    def get_user_from_group_info(self, username: str):
-        user = Text(self.driver, xpath="//*[@text='%s']" % username)
-        user.scroll_to_element()
-        return user
-
-
 class CommunityView(HomeView):
     def __init__(self, driver):
         super().__init__(driver)
@@ -610,7 +576,6 @@ class ChatView(BaseView):
         self.save_image_icon_button = Button(self.driver, accessibility_id="save-image")
 
         # Group chats
-        self.group_info = GroupInfoButton(self.driver)
         self.leave_chat_button = Button(self.driver, accessibility_id="leave-chat-button")
         self.leave_button = Button(self.driver, translation_id="leave", uppercase=True)
         self.remove_user_button = Button(self.driver, accessibility_id="remove-from-chat")
@@ -619,7 +584,6 @@ class ChatView(BaseView):
         self.edit_group_chat_name_edit_box = EditBox(self.driver, accessibility_id="new-chat-name")
         self.done_button = Button(self.driver, accessibility_id="done")
         self.create_group_chat_button = Button(self.driver, accessibility_id="Create group chat")
-
 
         # Contact's profile
         self.profile_send_message_button = ProfileSendMessageButton(self.driver)
@@ -639,64 +603,9 @@ class ChatView(BaseView):
         self.driver.info('Getting preview message for link: %s' % text)
         return PreviewMessage(self.driver, text)
 
-    def get_community_link_preview_by_text(self, text=None) -> object:
-        self.driver.info('Getting community preview message for link: %s' % text)
-        return CommunityLinkPreviewMessage(self.driver, text)
-
-    def delete_chat(self):
-        self.driver.info("Delete chat via options")
-        self.chat_options.click()
-        self.delete_chat_button.click()
-        self.delete_button.click()
-
-    def leave_chat(self):
-        self.driver.info("Leave chat via options")
-        self.chat_options.click()
-        self.leave_chat_button.click()
-        self.leave_button.click()
-
-    def clear_history(self):
-        self.driver.info("Clear chat history via options")
-        self.chat_options.click()
-        self.clear_history_button.click()
-        self.clear_button.click()
-
-    def leave_chat_via_group_info(self):
-        self.driver.info("Leave group chat via group info")
-        self.chat_options.click()
-        self.group_info.click()
-        self.leave_chat_button.click()
-        self.leave_button.click()
-
-    def rename_chat_via_group_info(self, new_chat_name):
-        self.driver.info("Rename group chat to: %s" % new_chat_name)
-        self.chat_options.click()
-        self.group_info.click()
-        self.edit_group_chat_name_button.click()
-        self.edit_group_chat_name_edit_box.send_keys(new_chat_name)
-        self.done_button.click()
-
     def get_username_checkbox(self, username: str, state_on=False):
         self.driver.info("Getting %s checkbox" % username)
         return UsernameCheckbox(self.driver, username, state_on)
-
-    def add_members_to_group_chat(self, user_names_to_add: list):
-        self.driver.info("Add %s to group chat" % ', '.join(map(str, user_names_to_add)))
-        self.chat_options.click()
-        group_info_view = self.group_info.click()
-        group_info_view.add_members.click()
-        for user_name in user_names_to_add:
-            user_contact = self.get_username_checkbox(user_name)
-            user_contact.scroll_to_element()
-            user_contact.click()
-        self.add_button.click()
-
-    def get_user_options_from_group_info(self, username: str):
-        self.driver.info("Get user options for: '%s'" % username)
-        self.chat_options.click()
-        group_info_view = self.group_info.click()
-        group_info_view.get_username_options(username).click()
-        return self
 
     def chat_element_by_text(self, text):
         chat_element = ChatElementByText(self.driver, text)
@@ -789,39 +698,6 @@ class ChatView(BaseView):
         element = Button(self.driver, accessibility_id='emoji-reaction-%s' % key)
         element.wait_and_click()
 
-    def view_profile_long_press(self, message=str):
-        self.chat_element_by_text(message).long_press_element()
-        self.view_profile_by_avatar_button.wait_and_click()
-        self.profile_block_contact_button.wait_for_visibility_of_element(5)
-
-    def move_to_messages_by_time_marker(self, marker='Today'):
-        self.driver.info("Moving to messages by time marker: '%s'" % marker)
-        Button(self.driver, xpath="//*[@text='%s'']" % marker).scroll_to_element(depth=50, direction='up')
-
-    def scroll_to_start_of_history(self, depth=20):
-        self.driver.info('Scrolling th the start of chat history')
-        for _ in range(depth):
-            try:
-                return self.history_start_icon.find_element()
-            except NoSuchElementException:
-                size = self.driver.get_window_size()
-                self.driver.swipe(500, size["height"] * 0.25, 500, size["height"] * 0.8)
-        else:
-            raise Exception('Start of chat history is not reached!')
-
-    def user_profile_image_in_mentions_list(self, username):
-        return Button(self.driver, xpath="//*[@content-desc='suggestions-list']//*[@text='%s']/"
-                                         "..//*[@content-desc='member-photo']" % username)
-
-    def search_user_in_mention_suggestion_list(self, username):
-        return Button(self.driver, xpath="//*[@content-desc='suggestions-list']//*[@text='%s']" % username)
-
-    def select_mention_from_suggestion_list(self, username_in_list, typed_search_pattern=''):
-        self.driver.info("Selecting '%s' from suggestion list by '%s'" % (username_in_list, typed_search_pattern))
-        self.chat_message_input.send_keys('@' + typed_search_pattern)
-        self.chat_message_input.click()
-        self.search_user_in_mention_suggestion_list(username_in_list).wait_for_visibility_of_element(10).click()
-
     def block_contact(self):
         self.driver.info("Block contact from other user profile")
         self.profile_options_button.click()
@@ -886,47 +762,5 @@ class ChatView(BaseView):
             self.chat_message_input.send_keys(description)
         self.send_message_button.click()
 
-    # Group chat system messages
-    @staticmethod
-    def leave_system_message(username):
-        return "%s left the group" % username
-
-    @staticmethod
-    def has_been_made_admin_system_message(admin, new_admin):
-        return "%s has made %s admin" % (admin, new_admin)
-
-    @staticmethod
-    def create_system_message(admin, chat_name):
-        return '%s created the group %s' % (admin, chat_name)
-
-    @staticmethod
-    def invite_system_message(admin, invited_user):
-        return '%s has invited %s' % (admin, invited_user)
-
-    @staticmethod
-    def has_added_system_message(admin, invited_user):
-        return '%s has added %s' % (admin, invited_user)
-
-    @staticmethod
-    def invited_to_join_system_message(username, chat_name):
-        return '%s invited you to join the group %s' % (username, chat_name)
-
-    @staticmethod
-    def join_system_message(username):
-        return '%s joined the group' % username
-
-    @staticmethod
-    def changed_group_name_system_message(admin, chat_name):
-        return "%s changed the group's name to %s" % (admin, chat_name)
-
-    ### Push notifications
-    @staticmethod
-    def pn_wants_you_to_join_to_group_chat(admin, chat_name):
-        return '%s wants you to join group %s' % (admin, chat_name)
-
     def authors_for_reaction(self, emoji: str):
         return Button(self.driver, accessibility_id='authors-for-reaction-%s' % emojis[emoji])
-
-    def chat_view_element_starts_with_text(self, text: str):
-        return BaseElement(self.driver,
-                           xpath="//*[@content-desc=':chat-floating-screen']//*[starts-with(@text,'%s')]" % text)
