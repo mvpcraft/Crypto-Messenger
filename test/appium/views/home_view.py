@@ -490,25 +490,11 @@ class HomeView(BaseView):
     def get_link_to_profile(self):
         self.driver.info('Getting profile link via share profile QR')
         self.show_qr_code_button.click()
-        try:
-            element = self.link_to_profile_button.find_element()
-        except NoSuchElementException:
-            element = None
-            pass
         self.share_profile_tab_button.click()
-        if element:
-            self.wait_for_staleness_of_element(element)
-        for _ in range(3):
-            try:
-                self.link_to_profile_button.click()
-                link_to_profile = self.sharing_text_native.text
-                break
-            except NoSuchElementException:
-                link_to_profile = ""
-                continue
+        self.link_to_profile_text.click()
+        link_to_profile = self.driver.get_clipboard_text()
         if not link_to_profile:
             raise NoSuchElementException("Can't get link to profile")
-        self.click_system_back_button()
         return link_to_profile
 
     def get_public_key(self):

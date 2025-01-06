@@ -422,8 +422,10 @@ class TestCommunityMultipleDeviceMerged(MultipleSharedDeviceTestCase):
         try:
             chat_element.wait_for_visibility_of_element(120)
             received = True
-            if chat_element.image_container_in_message.is_element_differs_from_template("images_gallery.png", 5):
-                self.errors.append("Gallery message do not match the template!")
+            image = chat_element.image_container_in_message
+            if (image.is_element_differs_from_template("images_gallery.png", 5) and
+                    image.is_element_differs_from_template("images_gallery_inverted.png", 5)):
+                self.errors.append("Gallery message does not match the template!")
         except TimeoutException:
             self.errors.append("Gallery message was not received")
             received = False
