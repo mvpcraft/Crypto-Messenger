@@ -100,21 +100,13 @@ class BaseElement(object):
         self.click()
 
     def click_until_presence_of_element(self, desired_element, attempts=4):
-        counter = 0
         self.driver.info("Click until `%s` by `%s`: `%s` will be presented" % (
             desired_element.name, desired_element.by, desired_element.locator))
-        while not desired_element.is_element_displayed(1) and counter <= attempts:
-            try:
-                el = self.find_element()
-                try:
-                    el.click()
-                except AttributeError:
-                    raise Exception("Element: %s\n Element type: %s" % (el, type(el)))
-                return self.navigate()
-            except (NoSuchElementException, TimeoutException):
-                counter += 1
-        else:
-            self.driver.info("%s element not found" % desired_element.name)
+        for _ in range(attempts):
+            self.find_element().click()
+            if desired_element.is_element_displayed(2):
+                return
+        raise NoSuchElementException("%s element not found" % desired_element.name)
 
     def double_click(self):
         self.driver.info('Double tap on: %s' % self.name)

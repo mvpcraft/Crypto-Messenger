@@ -693,7 +693,7 @@ class TestOneToOneChatMultipleSharedDevicesNewUiTwo(MultipleSharedDeviceTestCase
             chat.click()
         else:
             self.home_2.contacts_tab.click()
-            chat.click()
+            chat.find_element().click()
             self.chat_2.profile_send_message_button.click()
 
         lost_messages = list()

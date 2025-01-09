@@ -54,7 +54,7 @@ class ChatElement(SilentButton):
     def click(self):
         if self.community:
             from views.chat_view import CommunityView
-            desired_element = CommunityView(self.driver).community_description_text
+            desired_element = CommunityView(self.driver).community_title
         else:
             from views.chat_view import ChatView
             desired_element = ChatView(self.driver).chat_message_input
@@ -400,7 +400,7 @@ class HomeView(BaseView):
             self.close_activity_centre.wait_for_rendering_ended_and_click()
             self.chats_tab.wait_for_visibility_of_element()
 
-    def add_contact(self, public_key, nickname='', remove_from_contacts=False):
+    def add_contact(self, public_key, nickname=''):
         self.driver.info("Adding user to Contacts via chats > add new contact")
         self.new_chat_button.click_until_presence_of_element(self.add_a_contact_chat_bottom_sheet_button)
         self.add_a_contact_chat_bottom_sheet_button.click()
@@ -411,9 +411,7 @@ class HomeView(BaseView):
         chat.element_by_translation_id("user-found").wait_for_visibility_of_element()
         if not chat.view_profile_new_contact_button.is_element_displayed():
             chat.click_system_back_button()
-        chat.view_profile_new_contact_button.click_until_presence_of_element(chat.profile_block_contact_button)
-        if remove_from_contacts and chat.profile_remove_from_contacts.is_element_displayed():
-            chat.profile_remove_from_contacts.click()
+        chat.view_profile_new_contact_button.click_until_presence_of_element(chat.profile_send_contact_request_button)
         chat.profile_send_contact_request_button.click()
         chat.contact_request_message_input.send_keys("hi")
         chat.confirm_send_contact_request_button.click()
@@ -524,7 +522,7 @@ class HomeView(BaseView):
     def get_username(self):
         self.toast_content_element.wait_for_invisibility_of_element()
         profile_view = self.get_profile_view()
-        profile_view = self.profile_button.click_until_presence_of_element(profile_view.default_username_text)
+        self.profile_button.click_until_presence_of_element(profile_view.default_username_text)
         profile_view.default_username_text.wait_for_element(3)
         username = profile_view.default_username_text.text
         profile_view.click_system_back_button()

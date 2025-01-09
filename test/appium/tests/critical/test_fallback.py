@@ -46,7 +46,7 @@ class TestFallbackMultipleDevice(MultipleSharedDeviceTestCase):
         self.sign_in_2.just_fyi("Device 2: try syncing profile")
         self.sign_in_2.sync_profile(sync_code=self.sync_code)
         self.sign_in_2.progress_screen_title.wait_for_element()
-        assert self.sign_in_2.progress_screen_title.text == "Oops, something’s wrong"
+        assert self.sign_in_2.progress_screen_title.text == "Oops, something’s wrong!"
         self.home_3.chats_tab.is_element_displayed()  # just pinging 3rd device to save the connection
 
     @marks.testrail_id(740221)
@@ -258,7 +258,7 @@ class TestFallbackMultipleDevice(MultipleSharedDeviceTestCase):
         self.sign_in_2.explore_new_status_button.click_if_shown()
         self.sign_in_2.sync_profile(sync_code=self.sync_code, first_user=False)
         self.sign_in_2.progress_screen_title.wait_for_element()
-        assert self.sign_in_2.progress_screen_title.text == "Oops, something’s wrong"
+        assert self.sign_in_2.progress_screen_title.text == "Oops, something’s wrong!"
 
         self.sign_in_2.just_fyi("Device 2: try invalid passphrase")
         self.sign_in_2.try_seed_phrase_button.click()

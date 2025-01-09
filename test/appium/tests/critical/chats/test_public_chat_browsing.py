@@ -1,5 +1,6 @@
 import datetime
 import random
+import time
 
 import emoji
 import pytest
@@ -321,10 +322,7 @@ class TestCommunityMultipleDeviceMerged(MultipleSharedDeviceTestCase):
         self.home_1.get_chat(self.username_2).wait_for_visibility_of_element()
         self.chat_1 = self.home_1.get_chat(self.username_2).click()
         self.chat_1.send_message('hey')
-        self.chat_2 = self.home_2.get_chat(self.username_1).click_until_presence_of_element(
-            ChatView(self.drivers[1]).chat_message_input)
-        # self.chat_2.send_message(self.text_message)
-        # [home.click_system_back_button_until_element_is_shown() for home in self.homes]
+        self.chat_2 = self.home_2.get_chat(self.username_1).click()
         self.home_1.navigate_back_to_home_view()
 
         self.home_1.just_fyi("Open community to message")
@@ -920,6 +918,7 @@ class TestCommunityMultipleDeviceMergedTwo(MultipleSharedDeviceTestCase):
         expected_message = ""
         try:
             self.channel_2.element_by_translation_id("edit-message").double_click()
+            time.sleep(1)
             for i in range(29, 32):
                 self.channel_2.driver.press_keycode(i)
             input_text = self.channel_2.chat_message_input.text
@@ -1059,7 +1058,7 @@ class TestCommunityMultipleDeviceMergedTwo(MultipleSharedDeviceTestCase):
             self.errors.append("Not all channels are shown in community before joining: %s" % not_shown)
         chan = self.community_2.get_channel("general")
         if chan.is_element_displayed():
-            chan.click()
+            chan.find_element().click()
             if not self.channel_2.chat_element_by_text(control_message_general_chat).is_element_displayed(20):
                 self.errors.append("Message in community channel is not visible for user before join")
         else:
@@ -1175,7 +1174,7 @@ class TestCommunityMultipleDeviceMergedTwo(MultipleSharedDeviceTestCase):
             self.errors.append("Pending status is not displayed")
         general_channel = self.community_2.get_channel("general")
         if general_channel.is_element_displayed():
-            general_channel.click()
+            general_channel.find_element().click()
             if not self.channel_2.chat_element_by_text(control_message_general_chat).is_element_displayed(30):
                 self.errors.append(
                     "Message in community channel is not visible for user before join, it was indicated as " \

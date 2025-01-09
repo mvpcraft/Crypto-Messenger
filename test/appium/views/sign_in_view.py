@@ -73,14 +73,14 @@ class SignInView(BaseView):
     def create_user(self, password=common_password, first_user=True, enable_notifications=False):
         self.driver.info("## Creating new multiaccount with password:'%s'" % password, device=False)
         if first_user:
-            self.create_profile_button.click_until_presence_of_element(self.start_fresh_lets_go_button)
+            self.create_profile_button.click()
             self.maybe_later_button.wait_and_click()
         else:
             if self.show_profiles_button.is_element_displayed(20):
                 self.show_profiles_button.click()
             self.plus_profiles_button.click()
             self.create_new_profile_button.click()
-        self.start_fresh_lets_go_button.click_until_presence_of_element(self.profile_title_input)
+        self.start_fresh_lets_go_button.click()
         self.set_password(password)
         self.chats_tab.wait_for_visibility_of_element(30)
         self.driver.info("## New multiaccount is created successfully!", device=False)
@@ -97,14 +97,14 @@ class SignInView(BaseView):
 
         if not after_sync_code:
             if not second_user:
-                self.create_profile_button.click_until_presence_of_element(self.start_fresh_lets_go_button)
+                self.create_profile_button.click()
                 self.maybe_later_button.wait_and_click()
             else:
                 self.plus_profiles_button.click()
                 self.create_new_profile_button.click()
             self.use_recovery_phrase_button.click()
         self.passphrase_edit_box.send_keys(passphrase)
-        self.continue_button.click_until_presence_of_element(self.profile_title_input)
+        self.continue_button.click()
         self.set_password(password)
         self.chats_tab.wait_for_visibility_of_element(30)
         self.driver.info("## Multiaccount is recovered successfully!", device=False)

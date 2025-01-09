@@ -194,7 +194,8 @@ class TestGroupChatMultipleDeviceMergedNewUI(MultipleSharedDeviceTestCase):
 
         self.chats[0].just_fyi("Admin relogins")
         self.chats[0].reopen_app(user_name=self.usernames[0])
-        self.homes[0].get_chat(self.chat_name).click()
+        if not self.chats[0].chat_message_input.is_element_displayed(15):
+            self.homes[0].get_chat(self.chat_name).click()
 
         self.chats[0].just_fyi("Admin checks reactions count after relogin")
         message_element = self.chats[0].chat_element_by_text(message)
@@ -484,7 +485,6 @@ class TestGroupChatMultipleDeviceMergedNewUI(MultipleSharedDeviceTestCase):
         if not chat.chat_preview.text.startswith("%s: %s" % (self.usernames[0], muted_message[:25])):
             self.errors.append("Message text '%s' is not shown in chat preview after mute" % muted_message)
         chat.click()
-        chat.click()
         if not self.chats[1].chat_element_by_text(muted_message).is_element_displayed(30):
             self.errors.append(
                 "Message '%s' is not shown in chat for %s (Member 1) after mute" % (muted_message, self.usernames[1]))
@@ -520,7 +520,6 @@ class TestGroupChatMultipleDeviceMergedNewUI(MultipleSharedDeviceTestCase):
                 after_mute_counter, initial_counter + 1))
         if not chat.chat_preview.text.startswith("%s: %s" % (self.usernames[2], unmuted_message)):
             self.errors.append("Message text '%s' is not shown in chat preview after unmute" % unmuted_message)
-        chat.click()
         chat.click()
         if not self.chats[1].chat_element_by_text(unmuted_message).is_element_displayed(30):
             self.errors.append(
