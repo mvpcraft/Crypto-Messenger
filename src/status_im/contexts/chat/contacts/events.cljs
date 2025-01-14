@@ -4,7 +4,6 @@
     [re-frame.core :as re-frame]
     [status-im.common.json-rpc.events :as json-rpc]
     [status-im.constants :as constants]
-    [taoensso.timbre :as log]
     [utils.i18n :as i18n]
     [utils.re-frame :as rf]
     [utils.transforms :as transforms]))
@@ -85,7 +84,7 @@
                    :params      []
                    :js-response true
                    :on-success  [:contacts/contacts-loaded]
-                   :on-error    #(log/error "failed to fetch contacts" %)})))
+                   :on-error    [:log/error "failed to fetch contacts"]})))
 
 (defn send-contact-request
   [{:keys [db]} [id message]]
@@ -94,40 +93,61 @@
            [{:method      "wakuext_sendContactRequest"
              :js-response true
              :params      [{:id id :message (or message (i18n/label :t/add-me-to-your-contacts))}]
-             :on-error    [:contact.ui/send-contact-request-failure id]
+             :on-error    [:contacts/send-contact-request-error id]
              :on-success  [:transport/message-sent]}]]]}))
 
 (rf/reg-event-fx :contact.ui/send-contact-request send-contact-request)
 
-(defn send-contact-request-failure
+(defn send-contact-request-error
   [_ [id error]]
-  (log/error "Failed to send contact request"
-             {:error error
-              :event :contact.ui/send-contact-request
-              :id    id}))
+  {:fx [[:effects.log/error
+         ["Failed to send contact request"
+          {:id    id
+           :error error
+           :event :contact.ui/send-contact-request}]]]})
 
-(rf/reg-event-fx :contact.ui/send-contact-request-failure send-contact-request-failure)
+(rf/reg-event-fx :contact.ui/send-contact-request-error send-contact-request-error)
 
-(rf/defn remove-contact
+(defn remove-contact
   "Remove a contact from current account's contact list"
-  {:events [:contact.ui/remove-contact-pressed]}
-  [{:keys [db]} {:keys [public-key]}]
-  {:db            (-> db
-                      (assoc-in [:contacts/contacts public-key :added?] false)
-                      (assoc-in [:contacts/contacts public-key :active?] false)
-                      (assoc-in [:contacts/contacts public-key :contact-request-state]
-                                constants/contact-request-state-none))
-   :json-rpc/call [{:method      "wakuext_retractContactRequest"
-                    :params      [{:id public-key}]
-                    :js-response true
-                    :on-success  #(rf/dispatch [:sanitize-messages-and-process-response %])
-                    :on-error    #(log/error "failed to remove contact" public-key %)}]})
+  [{:keys [db]} [{:keys [public-key]}]]
+  {:db (-> db
+           (assoc-in [:contacts/contacts public-key :added?] false)
+           (assoc-in [:contacts/contacts public-key :active?] false)
+           (assoc-in [:contacts/contacts public-key :contact-request-state]
+                     constants/contact-request-state-none))
+   :fx [[:json-rpc/call
+         [{:method      "wakuext_retractContactRequest"
+           :params      [{:id public-key}]
+           :js-response true
+           :on-success  [:sanitize-messages-and-process-response]
+           :on-error    [:contacts/remove-contact-error public-key]}]]]})
 
-(rf/defn update-nickname
-  {:events [:contacts/update-nickname]}
-  [_ public-key nickname]
-  {:json-rpc/call [{:method      "wakuext_setContactLocalNickname"
-                    :params      [{:id public-key :nickname nickname}]
-                    :js-response true
-                    :on-success  #(rf/dispatch [:sanitize-messages-and-process-response %])
-                    :on-error    #(log/error "failed to set contact nickname " public-key nickname %)}]})
+(rf/reg-event-fx :contact.ui/remove-contact-pressed remove-contact)
+
+(defn remove-contact-error
+  [_ [public-key error]]
+  {:fx [[:effects.log/error ["failed to remove contact" public-key error]]]})
+
+(rf/reg-event-fx :contacts/remove-contact-error remove-contact-error)
+
+(defn update-nickname
+  [_ [public-key nickname]]
+  {:fx [[:json-rpc/call
+         [{:method      "wakuext_setContactLocalNickname"
+           :params      [{:id public-key :nickname nickname}]
+           :js-response true
+           :on-success  [:sanitize-messages-and-process-response]
+           :on-error    [:contacts/update-nickname-error public-key nickname]}]]]})
+
+(rf/reg-event-fx :contacts/update-nickname update-nickname)
+
+(defn update-nickname-error
+  [_ [public-key nickname error]]
+  {:fx [[:effects.log/error
+         ["failed to set contact nickname"
+          {:public-key public-key
+           :nickname   nickname}
+          error]]]})
+
+(rf/reg-event-fx :contacts/update-nickname-error update-nickname-error)

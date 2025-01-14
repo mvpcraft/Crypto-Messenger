@@ -1,7 +1,6 @@
 (ns status-im.contexts.chat.messenger.messages.delete-message-for-me.events
   (:require
     [status-im.contexts.chat.messenger.messages.list.events :as message-list]
-    [taoensso.timbre :as log]
     [utils.datetime :as datetime]
     [utils.i18n :as i18n]
     [utils.re-frame :as rf]))
@@ -39,10 +38,9 @@
                  :deleted-for-me-undoable-till)
       (update-db-clear-undo-timer db chat-id message-id))))
 
-(rf/defn delete
+(defn delete
   "Delete message for me now locally and broadcast after undo time limit timeout"
-  {:events [:chat.ui/delete-message-for-me]}
-  [{:keys [db]} {:keys [chat-id message-id]} undo-time-limit-ms]
+  [{:keys [db]} [{:keys [chat-id message-id]} undo-time-limit-ms]]
   (when (get-in db [:messages chat-id message-id])
     (let [existing-undo-toast (get-in db [:toasts :toasts :delete-message-for-me])
           toast-count         (inc (get existing-undo-toast :message-deleted-for-me-count 0))
@@ -76,21 +74,25 @@
                                           {:chat-id chat-id :message-id message-id}]
                                :ms       undo-time-limit-ms}]))))
 
-(rf/defn undo
-  {:events [:chat.ui/undo-delete-message-for-me]}
-  [{:keys [db]} {:keys [chat-id message-id]}]
+(rf/reg-event-fx :chat.ui/delete-message-for-me delete)
+
+(defn undo
+  [{:keys [db]} [{:keys [chat-id message-id]}]]
   (when (get-in db [:messages chat-id message-id])
     (message-list/rebuild-message-list
      {:db (update-db-undo-locally db chat-id message-id)}
      chat-id)))
 
-(rf/defn undo-all
-  {:events [:chat.ui/undo-all-delete-message-for-me]}
+(rf/reg-event-fx :chat.ui/undo-delete-message-for-me undo)
+
+(defn undo-all
   [{:keys [db]}]
   (when-let [pending-undos (get-in db
                                    [:toasts :toasts :delete-message-for-me
                                     :message-deleted-for-me-undos])]
     {:dispatch-n (mapv #(vector :chat.ui/undo-delete-message-for-me %) pending-undos)}))
+
+(rf/reg-event-fx :chat.ui/undo-all-delete-message-for-me undo-all)
 
 (defn- check-before-delete-and-sync
   "Make sure message alredy deleted-for-me? locally and undo timelimit has passed"
@@ -101,20 +103,28 @@
          deleted-for-me-undoable-till
          (>= (datetime/timestamp) deleted-for-me-undoable-till))))
 
-(rf/defn delete-and-sync
-  {:events [:chat.ui/delete-message-for-me-and-sync]}
-  [{:keys [db]} {:keys [message-id chat-id]} force?]
+(defn delete-and-sync
+  [{:keys [db]} [{:keys [message-id chat-id]} force?]]
   (when-let [_message (get-in db [:messages chat-id message-id])]
     (when (or force? (check-before-delete-and-sync db chat-id message-id))
-      {:db            (update-db-clear-undo-timer db chat-id message-id)
-       :json-rpc/call [{:method      "wakuext_deleteMessageForMeAndSync"
-                        :params      [chat-id message-id]
-                        :js-response true
-                        :on-error    #(log/error
-                                       "failed to delete message for me, message id: "
-                                       {:message-id message-id :error %})
-                        :on-success  #(rf/dispatch [:sanitize-messages-and-process-response
-                                                    %])}]})))
+      {:db (update-db-clear-undo-timer db chat-id message-id)
+       :fx [[:json-rpc/call
+             [{:method      "wakuext_deleteMessageForMeAndSync"
+               :params      [chat-id message-id]
+               :js-response true
+               :on-error    [:chat/delete-message-for-me-and-sync-error message-id]
+               :on-success  [:sanitize-messages-and-process-response]}]]]})))
+
+(rf/reg-event-fx :chat.ui/delete-message-for-me-and-sync delete-and-sync)
+
+(defn delete-and-sync-error
+  [_ [message-id error]]
+  {:fx [[:effects.log/error
+         ["failed to delete message for me, message id:"
+          {:message-id message-id
+           :error      error}]]]})
+
+(rf/reg-event-fx :chat/delete-message-for-me-and-sync-error delete-and-sync-error)
 
 (defn- filter-pending-sync-messages
   "traverse all messages find not yet synced deleted-for-me? messages"
@@ -125,9 +135,14 @@
        (map (fn [message] {:chat-id chat-id :message-id (first message)}))
        (concat acc)))
 
-(rf/defn sync-all
+(defn sync-all
   "Get all deleted-for-me messages that not yet synced with status-go and sync them"
-  {:events [:chat.ui/sync-all-deleted-for-me-messages]}
   [{:keys [db] :as cofx}]
-  (let [pending-sync-messages (reduce-kv filter-pending-sync-messages [] (:messages db))]
-    (apply rf/merge cofx (map #(delete-and-sync % true) pending-sync-messages))))
+  (let [pending-sync-messages (reduce-kv filter-pending-sync-messages [] (:messages db))
+        pending-effects       (map (fn [message]
+                                     (fn [cofx]
+                                       (delete-and-sync cofx [message true])))
+                                   pending-sync-messages)]
+    (apply rf/merge cofx pending-effects)))
+
+(rf/reg-event-fx :chat.ui/sync-all-deleted-for-me-messages sync-all)
