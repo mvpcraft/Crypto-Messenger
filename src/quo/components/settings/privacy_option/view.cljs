@@ -24,7 +24,7 @@
 
 (defn- card-footer
   [{:keys [active? label on-toggle theme]}]
-  [rn/touchable-without-feedback
+  [rn/pressable
    [rn/view {:style (style/card-footer theme)}
     [rn/view {:style style/card-footer-label-container}
      [text/text {:size :paragraph-2} label]]
@@ -54,22 +54,22 @@
     :or   {icon    :i/world
            active? false}}]
   (let [theme (quo.theme/use-theme)]
-    [rn/touchable-without-feedback
+    [rn/pressable
      {:on-press            on-select
       :accessibility-label :privacy-option-card
-      :testID              :privacy-option-card}
-     [rn/view (style/privacy-option-card active? theme)
-      [card-header
-       {:theme   theme
-        :active? active?
-        :icon    icon
-        :label   header}]
-      [unordered-list
-       {:theme           theme
-        :container-style (when-not footer {:margin-bottom 8})} list-items]
-      (when footer
-        [card-footer
-         {:theme     theme
-          :active?   active?
-          :label     footer
-          :on-toggle on-toggle}])]]))
+      :testID              :privacy-option-card
+      :style               (style/privacy-option-card active? theme)}
+     [card-header
+      {:theme   theme
+       :active? active?
+       :icon    icon
+       :label   header}]
+     [unordered-list
+      {:theme           theme
+       :container-style (when-not footer {:margin-bottom 8})} list-items]
+     (when footer
+       [card-footer
+        {:theme     theme
+         :active?   active?
+         :label     footer
+         :on-toggle on-toggle}])]))

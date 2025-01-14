@@ -345,6 +345,28 @@
        suffix  (get-from-colors-map suffix)
        opacity (alpha (/ opacity 100))))))
 
+(defn- override-color*
+  ([color]
+   (resolve-color* color nil nil))
+  ([color opacity]
+   (resolve-color* color opacity nil))
+  ([color opacity color-suffix]
+   (let [suffix (cond
+                  (not (keyword? color)) nil
+                  color-suffix           color-suffix
+                  opacity                50
+                  :else                  60)]
+     (cond-> color
+       suffix  (get-from-colors-map suffix)
+       opacity (alpha (/ opacity 100))))))
+
+(def override-color
+  "(override-color color opacity suffix)
+   color    hex string or keyword - (resolves from custom, network and semantic colors)
+   opacity  0-100 (optional) 
+   suffix   optionally override the color suffix to use when retrieving the color"
+  (memoize override-color*))
+
 (def resolve-color
   "(resolve-color color theme opacity)
    color   hex string or keyword (resolves from custom, network and semantic colors)
@@ -352,35 +374,16 @@
    opacity 0-100 (optional) - if set theme is ignored and goes to 50 suffix internally"
   (memoize resolve-color*))
 
-(def ^{:deprecated true :superseded-by "resolve-color"}
-     custom-color
-  "(custom-color color suffix opacity)
-   color   :primary/:purple/...
-   suffix  50/60
-   opacity 0-100 (optional)"
-  (memoize
-   (fn
-     ([color]
-      (custom-color color nil nil))
-     ([color suffix]
-      (custom-color color suffix nil))
-     ([color suffix opacity]
-      (let [resolved-color (cond
-                             (not (keyword? color))
-                             color
-
-                             (hex-string? (get colors-map color))
-                             (get colors-map color fallback-color)
-
-                             :else
-                             (get-in colors-map [color suffix] (get fallback-color suffix)))]
-        (if opacity
-          (alpha resolved-color (/ opacity 100))
-          resolved-color))))))
-
 (def shadow "rgba(9,16,28,0.08)")
 
 (defn theme-colors
   "(theme-colors light dark override-theme)"
   [light dark theme]
   (if (= theme :light) light dark))
+
+(defn invert-theme
+  [theme]
+  (case theme
+    :light :dark
+    :dark  :light
+    nil))
