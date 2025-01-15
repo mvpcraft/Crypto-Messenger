@@ -30,7 +30,8 @@
    (log/info "WalletConnect SDK initialisation successful")
    {:db (assoc db :wallet-connect/web3-wallet web3-wallet)
     :fx [[:dispatch [:wallet-connect/register-event-listeners]]
-         [:dispatch [:wallet-connect/get-sessions]]]}))
+         [:dispatch [:wallet-connect/get-sessions]]
+         [:dispatch [:wallet-connect/pair-with-pending-deeplink]]]}))
 
 (rf/reg-event-fx
  :wallet-connect/reload-on-network-change
@@ -40,6 +41,19 @@
        (log/info "Re-Initialising WalletConnect SDK due to network change")
        {:fx [[:dispatch [:wallet-connect/init]]]}))))
 
+(defn- on-session-proposal
+  [data]
+  (rf/dispatch [:wallet-connect/on-session-proposal data]))
+
+(defn- on-session-request
+  [data]
+  (rf/dispatch [:wallet-connect/on-session-request data]))
+
+(defn- on-session-delete
+  [data]
+  (rf/dispatch [:wallet-connect/on-session-delete data]))
+
+
 (rf/reg-event-fx
  :wallet-connect/register-event-listeners
  (fn [{:keys [db]}]
@@ -47,15 +61,32 @@
      {:fx [[:effects.wallet-connect/register-event-listener
             [web3-wallet
              constants/wallet-connect-session-proposal-event
-             #(rf/dispatch [:wallet-connect/on-session-proposal %])]]
+             on-session-proposal]]
            [:effects.wallet-connect/register-event-listener
             [web3-wallet
              constants/wallet-connect-session-request-event
-             #(rf/dispatch [:wallet-connect/on-session-request %])]]
+             on-session-request]]
            [:effects.wallet-connect/register-event-listener
             [web3-wallet
              constants/wallet-connect-session-delete-event
-             #(rf/dispatch [:wallet-connect/on-session-delete %])]]]})))
+             on-session-delete]]]})))
+
+(rf/reg-event-fx
+ :wallet-connect/unregister-event-listeners
+ (fn [{:keys [db]}]
+   (let [web3-wallet (get db :wallet-connect/web3-wallet)]
+     {:fx [[:effects.wallet-connect/unregister-event-listener
+            [web3-wallet
+             constants/wallet-connect-session-proposal-event
+             on-session-proposal]]
+           [:effects.wallet-connect/unregister-event-listener
+            [web3-wallet
+             constants/wallet-connect-session-request-event
+             on-session-request]]
+           [:effects.wallet-connect/unregister-event-listener
+            [web3-wallet
+             constants/wallet-connect-session-delete-event
+             on-session-delete]]]})))
 
 (rf/reg-event-fx
  :wallet-connect/on-init-fail

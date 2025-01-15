@@ -22,6 +22,21 @@
              :on-success  #(log/info "dApp paired successfully")}]]})))
 
 (rf/reg-event-fx
+ :wallet-connect/process-deeplink
+ (fn [{:keys [db]} [url]]
+   (let [web3-wallet (get db :wallet-connect/web3-wallet)]
+     (if web3-wallet
+       {:fx [[:dispatch [:wallet-connect/on-scan-connection url]]]}
+       {:db (assoc db :wallet-connect/pending-url url)}))))
+
+(rf/reg-event-fx
+ :wallet-connect/pair-with-pending-deeplink
+ (fn [{:keys [db]}]
+   (when-let [pending-url (get db :wallet-connect/pending-url)]
+     {:db (dissoc db :wallet-connect/pending-url)
+      :fx [[:dispatch [:wallet-connect/on-scan-connection pending-url]]]})))
+
+(rf/reg-event-fx
  :wallet-connect/on-scan-connection
  (fn [{:keys [db]} [scanned-text]]
    (let [network-status     (:network/status db)
