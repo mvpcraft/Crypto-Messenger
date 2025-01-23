@@ -247,7 +247,9 @@ class HomeView(BaseView):
     def __init__(self, driver):
         super().__init__(driver)
 
-        self.plus_button = Button(self.driver, accessibility_id="new-chat-button")
+        self.skip_editing_profile_button = Button(self.driver, xpath="//*[@content-desc='button-two']//*[@text='Skip']")
+        self.edit_profile_button = Button(self.driver, xpath="//*[@content-desc='button-one']//*[@text='Edit Profile']")
+        self.submit_create_profile_button = Button(self.driver, accessibility_id="submit-create-profile-button")
         self.plus_community_button = Button(self.driver, accessibility_id="new-communities-button")
         self.chat_name_text = Text(self.driver, accessibility_id="chat-name-text")
         self.start_new_chat_button = ChatButton(self.driver, accessibility_id="start-1-1-chat-button")
@@ -400,9 +402,15 @@ class HomeView(BaseView):
             self.close_activity_centre.wait_for_rendering_ended_and_click()
             self.chats_tab.wait_for_visibility_of_element()
 
-    def add_contact(self, public_key, nickname=''):
+    def add_contact(self, public_key, username='', nickname=''):
         self.driver.info("Adding user to Contacts via chats > add new contact")
-        self.new_chat_button.click_until_presence_of_element(self.add_a_contact_chat_bottom_sheet_button)
+        self.new_chat_button.click()
+        if username:
+            self.edit_profile_button.click()
+            self.get_sign_in_view().profile_title_input.send_keys(username)
+            self.submit_create_profile_button.click()
+        else:
+            self.skip_editing_profile_button.click_if_shown()
         self.add_a_contact_chat_bottom_sheet_button.click()
 
         chat = self.get_chat_view()

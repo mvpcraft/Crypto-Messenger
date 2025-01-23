@@ -32,7 +32,8 @@ class TestOneToOneChatMultipleSharedDevicesNewUi(MultipleSharedDeviceTestCase):
         for home in (self.home_1, self.home_2):
             home.navigate_back_to_home_view()
             home.chats_tab.click()
-        self.home_1.add_contact(self.public_key_2)
+        self.username_1 = "user_1"
+        self.home_1.add_contact(public_key=self.public_key_2, username=self.username_1)
 
         self.home_2.just_fyi("Accepting contact request from activity centre")
         self.home_2.handle_contact_request(self.username_1)
@@ -243,7 +244,7 @@ class TestOneToOneChatMultipleSharedDevicesNewUi(MultipleSharedDeviceTestCase):
             unpin_element.click_until_absense_of_element(desired_element=unpin_element)
             self.chat_1.pin_message(self.message_4, 'pin-to-chat')
             for chat in self.chat_1, self.chat_2:
-                if chat.chat_element_by_text(self.message_4).pinned_by_label.is_element_displayed(30):
+                if not chat.chat_element_by_text(self.message_4).pinned_by_label.is_element_displayed(30):
                     self.errors.append(chat, "Message 4 is not pinned in chat after unpinning previous one")
 
         self.home_1.just_fyi("Check pinned messages are visible in Pinned panel for both users")
