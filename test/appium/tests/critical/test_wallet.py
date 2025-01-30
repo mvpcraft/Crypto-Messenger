@@ -214,10 +214,11 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
         self.drivers, self.loop = create_shared_drivers(1)
         self.sign_in_view = SignInView(self.drivers[0])
         self.sender, self.receiver = transaction_senders['ETH_1'], transaction_senders['ETH_2']
-        self.total_balance = {'Ether': 0.0062, 'USDCoin': 5.0, 'Status': 13.0, 'Uniswap': 0.627, 'Dai Stablecoin': 0.0}
+        self.total_balance = {'Ether': 0.0262, 'USDCoin': 5.0, 'Status': 13.0, 'Uniswap': 0.627, 'Dai Stablecoin': 0.0}
         self.mainnet_balance = {'Ether': 0.005, 'USDCoin': 0.0, 'Status': 10.0, 'Uniswap': 0.127, 'Dai Stablecoin': 0.0}
         self.optimism_balance = {'Ether': 0.0011, 'USDCoin': 5.0, 'Status': 3.0, 'Uniswap': 0, 'Dai Stablecoin': 0.0}
-        self.arb_balance = {'Ether': 0.0001, 'USDCoin': 0.0, 'Status': 0.0, 'Uniswap': 0.5, 'Dai Stablecoin': 0.0}
+        self.arb_balance = {'Ether': 0.0051, 'USDCoin': 0.0, 'Status': 0.0, 'Uniswap': 0.5, 'Dai Stablecoin': 0.0}
+        self.base_balance = {'Ether': 0.015, 'USDCoin': 0.0, 'Status': 0.0, 'Uniswap': 0.0, 'Dai Stablecoin': 0.0}
         self.sender['wallet_address'] = '0x' + self.sender['address']
         self.receiver['wallet_address'] = '0x' + self.receiver['address']
         self.sign_in_view.recover_access(passphrase=self.sender['passphrase'])
@@ -228,6 +229,7 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
         self.profile_view.switch_network()
         self.sign_in_view.sign_in(user_name=self.sender_username)
         self.wallet_view = self.home_view.wallet_tab.click()
+        self.account_name = 'Account 1'
 
     @marks.testrail_id(740490)
     def test_wallet_balance_mainnet(self):
@@ -243,7 +245,8 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
         expected_balances = {
             'Mainnet': self.mainnet_balance,
             'Arbitrum': self.arb_balance,
-            'Optimism': self.optimism_balance
+            'Optimism': self.optimism_balance,
+            'Base': self.base_balance
         }
 
         for network in expected_balances:
@@ -295,7 +298,7 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
                                                                              '…').lower()
                 receiver_short_address = self.receiver['wallet_address'].replace(self.receiver['wallet_address'][6:-3],
                                                                                  '…').lower()
-                for text in ['Account 1', sender_short_address, expected_amount]:
+                for text in [self.account_name, sender_short_address, expected_amount]:
                     if not self.wallet_view.from_data_container.get_child_element_by_text(text).is_element_displayed():
                         self.errors.append(
                             self.wallet_view,
@@ -376,7 +379,7 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
                     '1 SNT').is_element_displayed():
                 self.errors.append(self.wallet_view,
                                    "%s: Spending cap is not shown on the 'Set Spending Cap' screen" % network)
-            for text in ['Account 1',
+            for text in [self.account_name,
                          self.sender['wallet_address'].replace(self.sender['wallet_address'][5:-3], '...').lower()]:
                 if not self.wallet_view.account_approval_info_container.get_child_element_by_text(
                         text).is_element_displayed():
@@ -426,6 +429,121 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
             element=self.wallet_view.add_account_button, attempts=6)
         self.errors.verify_no_errors()
 
+    @marks.testrail_id(741612)
+    def test_wallet_bridge_flow_mainnet(self):
+        self.wallet_view.navigate_back_to_wallet_view()
+        self.wallet_view.get_account_element().click()
+        self.wallet_view.bridge_button.click()
+        networks = {'Optimism': 'Arbitrum', 'Arbitrum': 'Base', 'Base': 'Optimism'}
+        amount = '0.001'
+        for network_from, network_to in networks.items():
+            self.wallet_view.just_fyi("Checking bridge from %s to %s" % (network_from, network_to))
+            self.wallet_view.select_asset('Ether')
+            self.wallet_view.select_network(network_from)
+            self.wallet_view.select_network(network_to)
+            self.wallet_view.set_amount(amount)
+            data_to_check = {
+                'Max fees': r"[$]\d+.\d+",
+                'Bridged to %s' % network_to: r"0.000\d+ ETH"
+            }
+            for key, expected_value in data_to_check.items():
+                try:
+                    text = self.wallet_view.get_data_item_element_text(data_item_name=key)
+                    if not re.findall(expected_value, text):
+                        self.errors.append(self.wallet_view,
+                                           "%s to %s: %s is not a number - %s before pressing Review Bridge button" % (
+                                               network_from, network_to, key, text))
+                except TimeoutException:
+                    self.errors.append(self.wallet_view,
+                                       "%s to %s: %s is not shown before pressing Review Bridge button" % (
+                                           network_from, network_to, key))
+            self.wallet_view.just_fyi("Checking routes from %s to %s" % (network_from, network_to))
+            try:
+                element = self.wallet_view.get_route_element('from')
+                element.wait_for_element()
+                shown_amount = element.amount_text
+                if shown_amount != amount + ' ETH':
+                    self.errors.append(self.wallet_view, "%s to %s: 'From' route amount %s doesn't match expected %s" %
+                                       (network_from, network_to, shown_amount, amount + ' ETH'))
+                shown_network = element.network_text
+                if shown_network != network_from:
+                    self.errors.append(self.wallet_view, "%s to %s: 'From' route network %s doesn't match expected %s" %
+                                       (network_from, network_to, shown_network, network_from))
+            except TimeoutException:
+                self.errors.append(self.wallet_view, "%s to %s: 'From' route is not shown" % (network_from, network_to))
+
+            try:
+                element = self.wallet_view.get_route_element('to')
+                element.wait_for_element()
+                shown_amount = element.amount_text
+                if not re.findall(r"0.000\d+ ETH", shown_amount):
+                    self.errors.append(self.wallet_view, "%s to %s: 'To' route amount %s is not a number" %
+                                       (network_from, network_to, shown_amount))
+                shown_network = element.network_text
+                if shown_network != network_to:
+                    self.errors.append(self.wallet_view, "%s to %s: 'To' route network %s doesn't match expected %s" %
+                                       (network_from, network_to, shown_network, network_to))
+            except TimeoutException:
+                self.errors.append(self.wallet_view, "%s to %s: 'To' route is not shown" % (network_from, network_to))
+
+            self.wallet_view.confirm_button.click()
+            self.wallet_view.just_fyi("Checking Bridge screen from %s to %s" % (network_from, network_to))
+            containers = {'from': self.wallet_view.from_data_container, 'to': self.wallet_view.to_data_container}
+            for name, container in containers.items():
+                try:
+                    container.wait_for_element()
+                    for text in [self.account_name,
+                                 self.sender['wallet_address'].replace(self.sender['wallet_address'][6:-3],
+                                                                       '…').lower()]:
+                        if not container.get_child_element_by_text(text).is_element_displayed():
+                            self.errors.append(
+                                self.wallet_view,
+                                "%s to %s: Text %s is not shown in the '%s' data container on the Review Bridge screen"
+                                % (network_from, network_to, text, name))
+                    amount_text = container.amount_text
+                    if name == 'from' and amount_text != amount + ' ETH':
+                        self.errors.append(
+                            self.wallet_view,
+                            "%s to %s: amount %s in the 'from' data container doesn't match expected %s ETH"
+                            % (network_from, network_to, amount_text, amount))
+                    if name == 'to' and not re.findall(r"0.000\d+ ETH", amount_text):
+                        self.errors.append(
+                            self.wallet_view,
+                            "%s to %s: amount %s in the 'to' data container is not a number"
+                            % (network_from, network_to, amount_text))
+                except TimeoutException:
+                    self.errors.append(self.wallet_view, "%s to %s: data '%s' is not shown in Review Bridge screen" %
+                                       (network_from, network_to, name))
+            if network_to == 'Arbitrum':
+                network_to_short_name = 'Arb1.'
+            elif network_to == 'Optimism':
+                network_to_short_name = 'Oeth.'
+            else:
+                network_to_short_name = network_to
+            data_to_check = {
+                'Est. time': ' min',
+                'Max fees': r"[$]\d+.\d+",
+                'Bridged to %s' % network_to_short_name: r"0.000\d+ ETH"
+            }
+            for key, expected_value in data_to_check.items():
+                try:
+                    text = self.wallet_view.get_data_item_element_text(data_item_name=key)
+                    if not re.findall(expected_value, text):
+                        self.errors.append(self.wallet_view,
+                                           "%s to %s: %s has incorrect value - %s on the Review Bridge screen" % (
+                                               network_from, network_to, key, text))
+                except TimeoutException:
+                    self.errors.append(self.wallet_view,
+                                       "%s to %s: %s is not shown on the Review Bridge screen" % (
+                                           network_from, network_to, key))
+            self.wallet_view.slide_button_track.slide()
+            if not self.wallet_view.password_input.is_element_displayed():
+                self.errors.append("%s to %s: can't confirm bridge" % (network_from, network_to))
+            self.wallet_view.click_system_back_button(times=5)
+        self.wallet_view.click_system_back_button_until_presence_of_element(
+            element=self.wallet_view.add_account_button, attempts=6)
+        self.errors.verify_no_errors()
+
     @marks.testrail_id(727231)
     def test_wallet_add_remove_regular_account(self):
         self.wallet_view.navigate_back_to_wallet_view()
@@ -441,7 +559,7 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
         self.wallet_view.just_fyi("Checking that the new wallet is added to the Share QR Code menu")
         self.home_view.show_qr_code_button.click()
         self.home_view.share_wallet_tab_button.click()
-        if self.home_view.account_name_text.text != 'Account 1':
+        if self.home_view.account_name_text.text != self.account_name:
             self.errors.append(self.home_view, "Incorrect first account is shown on Share QR Code menu")
         self.home_view.qr_code_image_element.swipe_left_on_element()
         try:
@@ -484,7 +602,7 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
         self.wallet_view.just_fyi("Checking that the new wallet is added to the Share QR Code menu")
         self.home_view.show_qr_code_button.click()
         self.home_view.share_wallet_tab_button.click()
-        if self.home_view.account_name_text.text != 'Account 1':
+        if self.home_view.account_name_text.text != self.account_name:
             self.errors.append(self.home_view, "Incorrect first account is shown on Share QR Code menu")
         self.home_view.qr_code_image_element.swipe_left_on_element()
         try:

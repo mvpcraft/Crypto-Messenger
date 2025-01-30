@@ -59,6 +59,17 @@ class ActivityElement(BaseElement):
                     xpath="//*[@content-desc='context-tag'][3]/android.widget.TextView").text
 
 
+class ConfirmationViewInfoContainer(BaseElement):
+
+    def __init__(self, driver, label_name: str):
+        self.locator = "//*[@content-desc='summary-%s-label']/following-sibling::android.view.ViewGroup[1]" % label_name
+        super().__init__(driver, xpath=self.locator)
+
+    @property
+    def amount_text(self):
+        return Text(self.driver, xpath=self.locator + "/*[@content-desc='networks']/android.widget.TextView").text
+
+
 class WalletView(BaseView):
     def __init__(self, driver):
         super().__init__(driver)
@@ -85,6 +96,7 @@ class WalletView(BaseView):
         self.account_emoji_button = Button(self.driver, accessibility_id='account-emoji')
         self.send_button = Button(self.driver, accessibility_id='send')
         self.swap_button = Button(self.driver, accessibility_id='swap')
+        self.bridge_button = Button(self.driver, accessibility_id='bridge')
         self.send_from_drawer_button = Button(
             self.driver, xpath="//*[@content-desc='send']/*[@content-desc='left-icon-for-action']")
         self.copy_address_button = Button(self.driver, accessibility_id='copy-address')
@@ -105,11 +117,9 @@ class WalletView(BaseView):
         self.confirm_button = Button(self.driver, accessibility_id='button-one')
         self.done_button = Button(self.driver, accessibility_id='done')
 
-        # Review Send page
-        self.from_data_container = BaseElement(
-            self.driver, xpath="//*[@content-desc='summary-from-label']/following-sibling::android.view.ViewGroup[1]")
-        self.to_data_container = BaseElement(
-            self.driver, xpath="//*[@content-desc='summary-to-label']/following-sibling::android.view.ViewGroup[1]")
+        # Review Send and Review Bridge screens
+        self.from_data_container = ConfirmationViewInfoContainer(self.driver, label_name='from')
+        self.to_data_container = ConfirmationViewInfoContainer(self.driver, label_name='to')
 
         # Swap flow
         self.approve_swap_button = Button(self.driver, accessibility_id='Approve')
@@ -282,3 +292,20 @@ class WalletView(BaseView):
         locator = "//*[@content-desc='swap-input'][2]//*[@content-desc='token-avatar']" \
                   "/following-sibling::*//*[starts-with(@text,'0.000')]"
         BaseElement(self.driver, xpath=locator).wait_for_visibility_of_element()
+
+    def get_route_element(self, route_name: str):
+        class RouteElement(BaseElement):
+            def __init__(self, driver, route_name):
+                self.locator = "//*[@text='%s']/following-sibling::*[@content-desc='container'][%s]" % (
+                    route_name.capitalize(), 1 if route_name == 'from' else 2)
+                super().__init__(driver, xpath=self.locator)
+
+            @property
+            def amount_text(self):
+                return Text(self.driver, xpath="(%s//android.widget.TextView)[1]" % self.locator).text
+
+            @property
+            def network_text(self):
+                return Text(self.driver, xpath="(%s//android.widget.TextView)[2]" % self.locator).text
+
+        return RouteElement(self.driver, route_name)
