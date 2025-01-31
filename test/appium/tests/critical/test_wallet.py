@@ -214,8 +214,8 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
         self.drivers, self.loop = create_shared_drivers(1)
         self.sign_in_view = SignInView(self.drivers[0])
         self.sender, self.receiver = transaction_senders['ETH_1'], transaction_senders['ETH_2']
-        self.total_balance = {'Ether': 0.0262, 'USDCoin': 5.0, 'Status': 13.0, 'Uniswap': 0.627, 'Dai Stablecoin': 0.0}
-        self.mainnet_balance = {'Ether': 0.005, 'USDCoin': 0.0, 'Status': 10.0, 'Uniswap': 0.127, 'Dai Stablecoin': 0.0}
+        self.total_balance = {'Ether': 0.0362, 'USDCoin': 5.0, 'Status': 13.0, 'Uniswap': 0.627, 'Dai Stablecoin': 0.0}
+        self.mainnet_balance = {'Ether': 0.015, 'USDCoin': 0.0, 'Status': 10.0, 'Uniswap': 0.127, 'Dai Stablecoin': 0.0}
         self.optimism_balance = {'Ether': 0.0011, 'USDCoin': 5.0, 'Status': 3.0, 'Uniswap': 0, 'Dai Stablecoin': 0.0}
         self.arb_balance = {'Ether': 0.0051, 'USDCoin': 0.0, 'Status': 0.0, 'Uniswap': 0.5, 'Dai Stablecoin': 0.0}
         self.base_balance = {'Ether': 0.015, 'USDCoin': 0.0, 'Status': 0.0, 'Uniswap': 0.0, 'Dai Stablecoin': 0.0}
@@ -396,8 +396,7 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
 
             data_to_check = {
                 'Network': network,
-                # 'Max fees': r"[$]\d+.\d+", # ToDO: enable when https://github.com/status-im/status-mobile/issues/21948 is fixed
-                # 'Est. time': ' min',
+                'Max fees': r"[$]\d+.\d+",
             }
             for key, expected_value in data_to_check.items():
                 try:
