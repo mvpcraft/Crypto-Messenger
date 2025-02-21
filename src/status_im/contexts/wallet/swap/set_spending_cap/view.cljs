@@ -231,7 +231,7 @@
                              (biometric/get-icon-by-type biometric-type)
                              :password)
       :disabled?           (or loading-swap-proposal? (not swap-proposal))
-      :on-complete         #(rf/dispatch [:wallet/prepare-signatures-for-transactions :swap])}]))
+      :on-complete         #(rf/dispatch [:wallet/prepare-signatures-for-swap-transactions])}]))
 
 (defn- footer
   []
