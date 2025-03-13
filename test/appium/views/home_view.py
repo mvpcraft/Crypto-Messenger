@@ -380,9 +380,14 @@ class HomeView(BaseView):
         if self.toast_content_element.is_element_displayed(10):
             self.toast_content_element.wait_for_invisibility_of_element()
         try:
-            self.notifications_unread_badge.wait_for_element_text(text=str(notifications_count), wait_time=120)
+            self.notifications_unread_badge.wait_for_visibility_of_element(seconds=120)
         except TimeoutException:
             pass
+        if notifications_count > 1:
+            try:
+                self.notifications_unread_badge.wait_for_element_text(text=str(notifications_count), wait_time=120)
+            except TimeoutException:
+                pass
         self.open_activity_center_button.click_until_presence_of_element(self.close_activity_centre)
         chat_element = self.get_activity_center_element_by_text(username[:25])
         try:
