@@ -146,6 +146,7 @@ class BaseView(object):
         self.delete_button = Button(self.driver, translation_id="delete", uppercase=True)
         self.ok_continue_button = Button(self.driver, accessibility_id="Okay, continue")
         self.confirm_button = Button(self.driver, accessibility_id='Confirm')
+        self.options_button = Button(self.driver, accessibility_id="options-button")
 
         self.native_close_button = Button(self.driver, id="android:id/aerr_close")
         self.close_button = Button(self.driver, accessibility_id="back-button")

@@ -1,7 +1,7 @@
 from selenium.common.exceptions import NoSuchElementException
 
 from tests import common_password
-from views.base_element import Button, EditBox, Text
+from views.base_element import Button, EditBox, Text, BaseElement
 from views.base_view import BaseView
 
 
@@ -19,16 +19,19 @@ class UserProfileElement(Button):
         self.username = username
         self.index = index
         if username:
-            super().__init__(
-                driver,
-                xpath="//*[@text='%s']//ancestor::android.view.ViewGroup[@content-desc='profile-card']" % self.username)
+            self.locator = "//*[@text='%s']//ancestor::android.view.ViewGroup[@content-desc='profile-card']" % self.username
         elif index:
-            super().__init__(driver, xpath="(//*[@content-desc='profile-card'])[%s]" % self.index)
+            self.locator = "(//*[@content-desc='profile-card'])[%s]" % self.index
         else:
             raise AttributeError("Either username or profile index should be defined")
+        super().__init__(driver, xpath=self.locator)
 
     def open_user_options(self):
         Button(self.driver, xpath='%s//*[@content-desc="profile-card-options"]' % self.locator).click()
+
+    @property
+    def profile_image(self):
+        return BaseElement(self.driver, xpath=self.locator + "//*[@content-desc='profile-picture']")
 
 
 class SignInView(BaseView):

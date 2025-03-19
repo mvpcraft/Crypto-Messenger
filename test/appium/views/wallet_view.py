@@ -100,6 +100,8 @@ class WalletView(BaseView):
     def __init__(self, driver):
         super().__init__(driver)
         # Wallet view
+        self.total_balance_text = Text(
+            self.driver, xpath="//*[@content-desc='network-dropdown']/preceding-sibling::android.widget.TextView")
         self.network_drop_down = Button(self.driver, accessibility_id='network-dropdown')
         self.collectibles_tab = Button(self.driver, accessibility_id='collectibles-tab')
         self.add_account_button = Button(self.driver, accessibility_id='add-account')

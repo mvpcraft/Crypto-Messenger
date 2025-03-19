@@ -586,10 +586,13 @@ class ChatView(BaseView):
         self.create_group_chat_button = Button(self.driver, accessibility_id="Create group chat")
 
         # Contact's profile
+        self.contact_bio_text = Text(
+            self.driver, xpath="//*[@content-desc='username-status-icon']/following-sibling::*/android.widget.TextView")
         self.profile_send_message_button = ProfileSendMessageButton(self.driver)
         self.profile_options_button = Button(self.driver, accessibility_id="contact-actions")
         self.profile_block_contact_button = Button(self.driver, accessibility_id="block-user")
         self.confirm_block_contact_button = Button(self.driver, accessibility_id="block-contact")
+        self.profile_unblock_button = Button(self.driver, accessibility_id="icon, Unblock")
         self.profile_send_contact_request_button = Button(self.driver, accessibility_id="icon, Send contact request")
         self.contact_request_message_input = EditBox(self.driver, accessibility_id="contact-request-message")
         self.confirm_send_contact_request_button = EditBox(self.driver, accessibility_id="send-contact-request")

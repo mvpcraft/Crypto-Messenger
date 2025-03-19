@@ -112,11 +112,7 @@ class ChatElement(SilentButton):
 
     @property
     def chat_image(self):
-        class ChatImage(BaseElement):
-            def __init__(self, driver):
-                super().__init__(driver, xpath="//*[@content-desc='chat-icon']")
-
-        return ChatImage(self.driver)
+        return BaseElement(self.driver, xpath=self.locator + "//*[@content-desc='profile-picture']")
 
     @property
     def profile_unblock_button(self):
@@ -408,7 +404,7 @@ class HomeView(BaseView):
             self.close_activity_centre.wait_for_rendering_ended_and_click()
             self.chats_tab.wait_for_visibility_of_element()
 
-    def add_contact(self, public_key, username='', nickname=''):
+    def add_contact(self, public_key, username='', nickname='', close_profile=True):
         self.driver.info("Adding user to Contacts via chats > add new contact")
         self.new_chat_button.click()
         if username:
@@ -431,7 +427,8 @@ class HomeView(BaseView):
         chat.confirm_send_contact_request_button.click()
         if nickname:
             chat.set_nickname(nickname)
-        chat.close_button.click_until_absense_of_element(chat.close_button)
+        if close_profile:
+            chat.close_button.click_until_absense_of_element(chat.close_button)
 
     def create_group_chat(self, user_names_to_add: list, group_chat_name: str = 'new_group_chat'):
         self.driver.info("## Creating group chat '%s'" % group_chat_name, device=False)

@@ -1,5 +1,6 @@
 import time
 
+import pytest
 from selenium.common import NoSuchElementException
 
 from tests import common_password
@@ -77,11 +78,6 @@ class SyncSettingsButton(Button):
         self.scroll_to_element().click()
 
 
-class ProfilePictureElement(Button):
-    def __init__(self, driver):
-        super().__init__(driver, accessibility_id="chat-icon")
-
-
 class ProfileView(BaseView):
 
     def __init__(self, driver):
@@ -90,8 +86,12 @@ class ProfileView(BaseView):
 
         # Header
         self.default_username_text = Text(self.driver, accessibility_id="username")
+        self.bio_text = Text(self.driver,
+                             xpath="//*[@content-desc='username']/following-sibling::*/android.widget.TextView")
         self.contact_name_text = Text(self.driver, accessibility_id="contact-name")
-        self.profile_picture = ProfilePictureElement(self.driver)
+        self.profile_picture = BaseElement(self.driver, accessibility_id="profile-picture")
+        self.user_avatar = BaseElement(
+            self.driver, xpath="//*[@content-desc='dropdown']/preceding-sibling::*/*[@content-desc='user-avatar']")
         self.online_indicator = Button(self.driver, accessibility_id="online-profile-photo-dot")
         self.crop_photo_button = Button(self.driver, accessibility_id="Crop")
         self.shutter_button = Button(self.driver, accessibility_id="Shutter")
@@ -184,8 +184,23 @@ class ProfileView(BaseView):
         self.confirm_testnet_mode_change_button = Button(self.driver, accessibility_id="confirm-testnet-mode-change")
         self.key_pairs_and_accounts_button = Button(self.driver,
                                                     accessibility_id="Key pairs and accounts, label-component, icon")
-        self.options_button = Button(self.driver, accessibility_id="options-button")
         self.import_by_entering_recovery_phrase_button = Button(self.driver, accessibility_id="import-seed-phrase")
+
+        # Edit profile
+        self.edit_profile_name_button = Button(self.driver, accessibility_id='Name, label-component, icon')
+        self.edit_profile_input = EditBox(self.driver, accessibility_id='input')
+        self.save_name_button = Button(self.driver, accessibility_id='Save name')
+        self.edit_bio_button = Button(self.driver, accessibility_id='Bio, label-component, icon')
+        self.save_bio_button = Button(self.driver, accessibility_id='Save bio')
+        self.edit_accent_colour = Button(self.driver, accessibility_id='Accent colour, label-component, icon')
+        self.save_colour_button = Button(self.driver, accessibility_id='Save colour')
+
+        # Language and currency
+        self.language_and_currency_button = Button(
+            self.driver, accessibility_id='icon, Language and currency, label-component, icon')
+        self.change_currency_button = Button(
+            self.driver,
+            xpath="//*[@text='Currency']/following-sibling::*/*[contains(@content-desc,'label-component, icon')]")
 
     def switch_network(self):
         self.driver.info("Toggling test mode")
@@ -222,8 +237,8 @@ class ProfileView(BaseView):
 
     def edit_profile_picture(self, image_index: int, update_by="Gallery"):
         self.driver.info("## Setting custom profile image", device=False)
-        if not AbstractTestCase().environment == 'lt':
-            raise NotImplementedError('Test case is implemented to run on SauceLabs only')
+        if AbstractTestCase().environment != 'lt':
+            raise NotImplementedError('Test case is implemented to run on LambdaTest only')
         self.edit_profile_button.click()
         self.change_profile_photo_button.click()
         if update_by == "Gallery":
@@ -239,6 +254,13 @@ class ProfileView(BaseView):
         self.crop_photo_button.click()
         self.driver.info("## Custom profile image has been set", device=False)
         self.click_system_back_button()
+
+    def edit_username(self, new_username: str):
+        self.edit_profile_button.click()
+        self.edit_profile_name_button.click()
+        self.edit_profile_input.clear()
+        self.edit_profile_input.send_keys(new_username)
+        self.save_name_button.click()
 
     def take_photo(self):
         self.take_photo_button.click()
@@ -259,6 +281,12 @@ class ProfileView(BaseView):
         except IndexError:
             self.click_system_back_button(times=2)
             raise NoSuchElementException("Image with index %s was not found" % image_index) from None
+
+    def change_accent_colour(self, colour_name: str):
+        self.edit_profile_button.click()
+        self.edit_accent_colour.click()
+        Button(self.driver, accessibility_id=colour_name).click()
+        self.save_colour_button.click()
 
     def logout(self):
         self.driver.info("Logging out")
@@ -316,3 +344,20 @@ class ProfileView(BaseView):
     def get_missing_key_pair_by_name(self, key_pair_name: str):
         return BaseElement(self.driver,
                            xpath="//*[@content-desc='missing-keypair-item']//*[@text='%s']" % key_pair_name)
+
+    def turn_new_contact_requests_toggle(self, state: str = 'on'):
+        self.profile_messages_button.click()
+        element = Button(
+            self.driver,
+            xpath="//*[@content-desc='Allow new contact requests, label-component']//*[@resource-id='toggle-component']")
+        element.click()
+        if element.attribute_value('content-desc') != 'toggle-%s' % state:
+            pytest.fail("Allow new contact requests toggle was not turned %s" % state)
+        self.click_system_back_button()
+
+    def change_currency(self, new_currency: str):
+        self.language_and_currency_button.scroll_and_click()
+        self.change_currency_button.click()
+        self.element_by_text_part(new_currency).click()
+        time.sleep(1)
+        self.click_system_back_button(2)

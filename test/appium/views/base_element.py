@@ -11,6 +11,7 @@ from selenium.common.exceptions import NoSuchElementException, StaleElementRefer
 from selenium.webdriver import ActionChains
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
+import webcolors
 
 from tests import transl
 
@@ -269,6 +270,13 @@ class BaseElement(object):
         template = imagehash.average_hash(Image.open(image_template))
         element_image = imagehash.average_hash(self.image)
         return not bool(template - element_image)
+
+    def get_element_rgb(self, colors: int = 2):
+        palette = self.image.quantize(colors=colors).getpalette()
+        percentage = webcolors.rgb_to_rgb_percent((palette[:3]))
+        return (float(percentage.red.strip('%')),
+                float(percentage.green.strip('%')),
+                float(percentage.blue.strip('%')))
 
     def get_element_coordinates(self):
         element = self.find_element()
