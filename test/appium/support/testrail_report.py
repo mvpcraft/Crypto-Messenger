@@ -8,6 +8,7 @@ from sys import argv
 
 import emoji
 import requests
+from testrail.client import TestRail
 
 from support.base_test_report import BaseTestReport
 
@@ -36,18 +37,19 @@ class TestrailReport(BaseTestReport):
         self.headers['Content-Type'] = 'application/json'
         self.headers['x-api-ident'] = 'beta'
 
-        self.url = 'https://ethstatus.testrail.net/index.php?/'
-        self.api_url = self.url + 'api/v2/'
+        self.url = 'https://ethstatus.testrail.net'
+        self.api_url = self.url + '/index.php?/api/v2/'
+        self.client = TestRail(email=self.user, key=self.password, url=self.url, project_id=self.project_id)
 
     def get(self, method):
-        rval = requests.get(self.api_url + method, headers=self.headers).json()
+        rval = self.client.api._get(method)
         if 'error' in rval:
             logging.error("Failed TestRail request: %s" % rval['error'])
         return rval
 
     def post(self, method, data):
         data = bytes(json.dumps(data), 'utf-8')
-        return requests.post(self.api_url + method, data=data, headers=self.headers).json()
+        return self.client.api._post(method, data=json.loads(data))
 
     def add_attachment(self, method, path):
         files = {'attachment': (open(path, 'rb'))}
@@ -295,7 +297,7 @@ class TestrailReport(BaseTestReport):
     def get_test_result_link(self, test_run_id, test_case_id):
         try:
             test_id = self.get('get_results_for_case/%s/%s' % (test_run_id, test_case_id))['results'][0]['test_id']
-            return '%stests/view/%s' % (self.url, test_id)
+            return '%s/index.php?/tests/view/%s' % (self.url, test_id)
         except (KeyError, JSONDecodeError):
             print('Cannot extract result for %s e2e' % test_case_id)
             return None

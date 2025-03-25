@@ -14,3 +14,4 @@ PyGithub==1.55
 typing-extensions==4.12.2
 mnemonic==0.21
 bip-utils==2.9.3
+testrail==0.3.15
