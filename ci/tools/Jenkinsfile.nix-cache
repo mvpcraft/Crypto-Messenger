@@ -1,5 +1,5 @@
 #!/usr/bin/env groovy
-library 'status-jenkins-lib@nix/add-return-status'
+library 'status-jenkins-lib@v1.9.21'
 
 pipeline {
   agent { label params.AGENT_LABEL }
@@ -14,6 +14,11 @@ pipeline {
       name: 'NIX_CACHE_USER',
       description: 'Username for Nix binary cache host.',
       defaultValue: params.NIX_CACHE_USER ?: 'nix-cache'
+    )
+    booleanParam(
+      name: 'BUILD_COMPONENTS',
+      description: 'Whether to build Mobile components first.',
+      defaultValue: params.BUILD_COMPONENTS ?: true,
     )
   }
 
@@ -48,6 +53,7 @@ pipeline {
     }
 
     stage('Build status-go') {
+      when { expression { params.BUILD_COMPONENTS } }
       steps { script {
         def platforms = ['mobile.android', 'mobile.ios', 'library']
         if (os != 'Darwin')  { platforms.removeAll { it == 'mobile.ios' } }
@@ -66,6 +72,7 @@ pipeline {
     }
 
     stage('Build android jsbundle') {
+      when { expression { params.BUILD_COMPONENTS } }
       steps { script {
         /* Build/fetch deps required for jsbundle build. */
         nix.build(
@@ -78,6 +85,7 @@ pipeline {
     }
 
     stage('Build android deps') {
+      when { expression { params.BUILD_COMPONENTS } }
       steps { script {
         /* Allow for Android builds on Apple ARM. */
         env.NIXPKGS_SYSTEM_OVERRIDE = nixSysOverride(os, arch, 'android')
@@ -92,6 +100,7 @@ pipeline {
     }
 
     stage('Build nix shell deps') {
+      when { expression { params.BUILD_COMPONENTS } }
       steps { script {
         def shells = ['android', 'ios', 'fastlane', 'keytool', 'clojure', 'gradle']
         if (os != 'Darwin') { shells.removeAll { it == 'ios' } }
