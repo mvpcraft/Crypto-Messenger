@@ -1,5 +1,5 @@
 #!/usr/bin/env groovy
-library 'status-jenkins-lib@v1.9.20'
+library 'status-jenkins-lib@nix/add-return-status'
 
 pipeline {
   agent { label params.AGENT_LABEL }
@@ -112,15 +112,23 @@ pipeline {
 
     stage('Collect') {
       steps { script {
-        nix.shell(
+        exitCode = nix.shell(
           """
             find /nix/store/ -mindepth 1 -maxdepth 1 \
               | grep -v -e '.*.links\$' -e '.*.lock\$' -e '.*.drv\$' -e '.*.drv\$' -e '.*-status-mobile-.*' \
-              | nix path-info --stdin --recursive \
+              | xargs nix path-info --recursive \
               > "${WORKSPACE_TMP}/store-paths.txt"
           """,
-          pure: false
+          pure: false,
+          returnStatus: true
         )
+        /* Some paths can throw 'path is not valid' errors, but it's not fatal. */
+        if (exitCode != 0) {
+          currentBuild.result = 'UNSTABLE'
+        }
+        if (lineCount("${WORKSPACE_TMP}/store-paths.txt") == 0) {
+          throw new Exception("No Nix store paths found to copy.")
+        }
       } }
     }
 
@@ -151,4 +159,11 @@ def nixSysOverride(os, arch, target='android') {
         arch == 'arm64' &&
         target =~ /.*android$/
     ) ? 'x86_64-darwin' : ''
+}
+
+def lineCount(filePath) {
+    return sh(
+        script: "wc -l ${filePath}",
+        returnStdout: true
+    ).trim()
 }
