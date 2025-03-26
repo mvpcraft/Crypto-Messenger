@@ -20,11 +20,11 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
         self.drivers, self.loop = create_shared_drivers(1)
         self.sign_in_view = SignInView(self.drivers[0])
         self.sender, self.receiver = transaction_senders['ETH_1'], transaction_senders['ETH_2']
-        self.total_balance = {'Ether': 0.0362, 'USDCoin': 5.0, 'Status': 13.0, 'Uniswap': 0.627, 'Dai Stablecoin': 0.0}
-        self.mainnet_balance = {'Ether': 0.015, 'USDCoin': 0.0, 'Status': 10.0, 'Uniswap': 0.127, 'Dai Stablecoin': 0.0}
-        self.optimism_balance = {'Ether': 0.0011, 'USDCoin': 5.0, 'Status': 3.0, 'Uniswap': 0, 'Dai Stablecoin': 0.0}
-        self.arb_balance = {'Ether': 0.0051, 'USDCoin': 0.0, 'Status': 0.0, 'Uniswap': 0.5, 'Dai Stablecoin': 0.0}
-        self.base_balance = {'Ether': 0.015, 'USDCoin': 0.0, 'Status': 0.0, 'Uniswap': 0.0, 'Dai Stablecoin': 0.0}
+        self.total_balance = {'Ether': 0.0362, 'USD Coin': 5.0, 'Status': 13.0, 'Uniswap': 0.627, 'Dai Stablecoin': 0.0}
+        self.mainnet_balance = {'Ether': 0.015, 'USD Coin': 0.0, 'Status': 10.0, 'Uniswap': 0.127, 'Dai Stablecoin': 0.0}
+        self.optimism_balance = {'Ether': 0.0011, 'USD Coin': 5.0, 'Status': 3.0, 'Uniswap': 0, 'Dai Stablecoin': 0.0}
+        self.arb_balance = {'Ether': 0.0051, 'USD Coin': 0.0, 'Status': 0.0, 'Uniswap': 0.5, 'Dai Stablecoin': 0.0}
+        self.base_balance = {'Ether': 0.015, 'USD Coin': 0.0, 'Status': 0.0, 'Uniswap': 0.0, 'Dai Stablecoin': 0.0}
         self.sender['wallet_address'] = '0x' + self.sender['address']
         self.receiver['wallet_address'] = '0x' + self.receiver['address']
         self.sign_in_view.recover_access(passphrase=self.sender['passphrase'])
@@ -155,14 +155,13 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
                     self.errors.append(self.wallet_view, "%s on %s: can't confirm transaction" % (asset, network))
                 self.wallet_view.click_system_back_button_until_presence_of_element(
                     element=self.wallet_view.element_by_text('Select token'), attempts=4)
-        self.wallet_view.click_system_back_button_until_presence_of_element(
-            element=self.wallet_view.add_account_button, attempts=6)
         self.errors.verify_no_errors()
 
     @marks.testrail_id(741555)
     def test_wallet_swap_flow_mainnet(self):
-        self.wallet_view.navigate_back_to_wallet_view()
-        self.wallet_view.get_account_element().click()
+        self.sign_in_view.reopen_app(user_name=self.sender_username)
+        self.home_view.wallet_tab.click()
+        self.wallet_view.get_account_element().wait_for_rendering_ended_and_click()
         self.wallet_view.swap_button.click()
         for network in ['Mainnet', 'Optimism']:
             self.wallet_view.just_fyi("Checking the Swap flow for SNT on %s" % network)
@@ -240,14 +239,13 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
 
             self.wallet_view.click_system_back_button_until_presence_of_element(
                 element=self.wallet_view.element_by_text('Select asset to pay'), attempts=4)
-        self.wallet_view.click_system_back_button_until_presence_of_element(
-            element=self.wallet_view.add_account_button, attempts=6)
         self.errors.verify_no_errors()
 
     @marks.testrail_id(741612)
     def test_wallet_bridge_flow_mainnet(self):
-        self.wallet_view.navigate_back_to_wallet_view()
-        self.wallet_view.get_account_element().click()
+        self.sign_in_view.reopen_app(user_name=self.sender_username)
+        self.home_view.wallet_tab.click()
+        self.wallet_view.get_account_element().wait_for_rendering_ended_and_click()
         self.wallet_view.bridge_button.click()
         networks = {'Optimism': 'Arbitrum', 'Arbitrum': 'Base', 'Base': 'Optimism'}
         amount = '0.001'
@@ -348,13 +346,12 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
             if not self.wallet_view.password_input.is_element_displayed():
                 self.errors.append(self.wallet_view, "%s to %s: can't confirm bridge" % (network_from, network_to))
             self.wallet_view.click_system_back_button(times=5)
-        self.wallet_view.click_system_back_button_until_presence_of_element(
-            element=self.wallet_view.add_account_button, attempts=6)
         self.errors.verify_no_errors()
 
     @marks.testrail_id(727231)
     def test_wallet_add_remove_regular_account(self):
-        self.wallet_view.navigate_back_to_wallet_view()
+        self.sign_in_view.reopen_app(user_name=self.sender_username)
+        self.home_view.wallet_tab.click()
         self.wallet_view.just_fyi("Adding new regular account")
         new_account_name = "New Account"
         self.wallet_view.add_regular_account(account_name=new_account_name)

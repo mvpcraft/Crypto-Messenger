@@ -39,10 +39,10 @@ class TestWalletMultipleDevice(MultipleSharedDeviceTestCase):
         # sender_balance = self.network_api.get_balance(self.sender['wallet_address'])
         # receiver_balance = self.network_api.get_balance(self.receiver['wallet_address'])
         self.wallet_1.just_fyi("Getting ETH amount in the wallet of the sender before transaction")
-        self.wallet_1.get_account_element().click()
+        self.wallet_1.get_account_element().click_if_shown()
         eth_amount_sender = self.wallet_1.get_asset(asset_name='Ether').get_amount()
         self.wallet_2.just_fyi("Getting ETH amount in the wallet of the receiver before transaction")
-        self.wallet_2.get_account_element().click()
+        self.wallet_2.get_account_element().click_if_shown()
         eth_amount_receiver = self.wallet_2.get_asset(asset_name='Ether').get_amount()
         # return sender_balance, receiver_balance, eth_amount_sender, eth_amount_receiver
         return eth_amount_sender, eth_amount_receiver
@@ -69,6 +69,7 @@ class TestWalletMultipleDevice(MultipleSharedDeviceTestCase):
                 exp_amount = round(initial_eth_amount + amount_to_send, 4)
 
             # for _ in range(12):  # ToDo: 120 sec wait time, enable when autoupdate feature is ready
+            wallet_view.get_account_element().click_if_shown()
             new_eth_amount = round(wallet_view.get_asset(asset_name='Ether').get_amount(), 4)
             if user_name == self.sender_username and new_eth_amount <= exp_amount:
                 return
