@@ -79,6 +79,7 @@
  :<- [:dimensions/window]
  :-> :height)
 
+;; WARNING: Do not use :get-screen-params directly, use quo.context/use-screen-params instead
 (re-frame/reg-sub
  :get-screen-params
  :<- [:screen-params]
