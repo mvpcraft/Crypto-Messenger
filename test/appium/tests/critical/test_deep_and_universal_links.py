@@ -5,7 +5,7 @@ from tests.base_test_case import create_shared_drivers, MultipleSharedDeviceTest
 from views.sign_in_view import SignInView
 
 
-@pytest.mark.xdist_group(name="new_one_1")
+@pytest.mark.xdist_group(name="one_1")
 @marks.nightly
 class TestDeepLinksOneDevice(MultipleSharedDeviceTestCase):
 

@@ -10,7 +10,7 @@ from users import transaction_senders
 from views.sign_in_view import SignInView
 
 
-@pytest.mark.xdist_group(name="new_one_2")
+@pytest.mark.xdist_group(name="three_1")
 @marks.nightly
 @marks.secured
 @marks.smoke
@@ -21,7 +21,8 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
         self.sign_in_view = SignInView(self.drivers[0])
         self.sender, self.receiver = transaction_senders['ETH_1'], transaction_senders['ETH_2']
         self.total_balance = {'Ether': 0.0362, 'USD Coin': 5.0, 'Status': 13.0, 'Uniswap': 0.627, 'Dai Stablecoin': 0.0}
-        self.mainnet_balance = {'Ether': 0.015, 'USD Coin': 0.0, 'Status': 10.0, 'Uniswap': 0.127, 'Dai Stablecoin': 0.0}
+        self.mainnet_balance = {'Ether': 0.015, 'USD Coin': 0.0, 'Status': 10.0, 'Uniswap': 0.127,
+                                'Dai Stablecoin': 0.0}
         self.optimism_balance = {'Ether': 0.0011, 'USD Coin': 5.0, 'Status': 3.0, 'Uniswap': 0, 'Dai Stablecoin': 0.0}
         self.arb_balance = {'Ether': 0.0051, 'USD Coin': 0.0, 'Status': 0.0, 'Uniswap': 0.5, 'Dai Stablecoin': 0.0}
         self.base_balance = {'Ether': 0.015, 'USD Coin': 0.0, 'Status': 0.0, 'Uniswap': 0.0, 'Dai Stablecoin': 0.0}
@@ -88,7 +89,7 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
                 self.wallet_view.set_amount(data['amount'])
                 try:
                     max_fees_text = self.wallet_view.get_data_item_element_text(data_item_name='Max fees')
-                    if not re.findall(r"[$]\d+.\d+", max_fees_text):
+                    if not re.findall(r"<?[$|€]\d+.\d+", max_fees_text):
                         self.errors.append(self.wallet_view,
                                            "%s on %s: max fee is not a number - %s" % (asset, network, max_fees_text))
                 except TimeoutException:
@@ -96,7 +97,7 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
                         self.wallet_view,
                         "%s on %s: max fees is not shown before Review Send button is clicked" % (asset, network))
 
-                self.wallet_view.confirm_button.click()
+                self.wallet_view.confirm_button.click_until_presence_of_element(self.wallet_view.slide_button_track)
                 self.wallet_view.just_fyi("Checking Review Send page for %s on %s" % (asset, network))
 
                 sender_short_address = self.sender['wallet_address'].replace(self.sender['wallet_address'][6:-3],
@@ -123,7 +124,7 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
 
                 data_to_check = {
                     'Est. time': r'~\d+ sec',
-                    'Max fees': r"[$]\d+.\d+",
+                    'Max fees': r"<?[$|€]\d+.\d+",
                     'Recipient gets': "%s %s" % (data['amount'], 'ETH' if asset == 'Ether' else 'SNT')
                 }
                 for key, expected_value in data_to_check.items():
@@ -162,14 +163,14 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
         self.sign_in_view.reopen_app(user_name=self.sender_username)
         self.home_view.wallet_tab.click()
         self.wallet_view.get_account_element().wait_for_rendering_ended_and_click()
-        self.wallet_view.swap_button.click()
+        self.wallet_view.swap_button.wait_for_rendering_ended_and_click()
         for network in ['Mainnet', 'Optimism']:
             self.wallet_view.just_fyi("Checking the Swap flow for SNT on %s" % network)
             self.wallet_view.select_asset('Status')
             self.wallet_view.select_network(network)
             self.wallet_view.set_amount('1')
             data_to_check = {
-                'Max fees': r"[$]\d+.\d+",
+                'Max fees': r"<?[$|€]\d+.\d+",
                 'Max slippage': r"\d+.\d+[%]"
             }
             for key, expected_value in data_to_check.items():
@@ -211,7 +212,7 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
 
             data_to_check = {
                 'Network': network,
-                'Max fees': r"[$]\d+.\d+",
+                'Max fees': r"<?[$|€]\d+.\d+",
             }
             for key, expected_value in data_to_check.items():
                 try:
@@ -246,7 +247,7 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
         self.sign_in_view.reopen_app(user_name=self.sender_username)
         self.home_view.wallet_tab.click()
         self.wallet_view.get_account_element().wait_for_rendering_ended_and_click()
-        self.wallet_view.bridge_button.click()
+        self.wallet_view.bridge_button.wait_for_rendering_ended_and_click()
         networks = {'Optimism': 'Arbitrum', 'Arbitrum': 'Base', 'Base': 'Optimism'}
         amount = '0.001'
         for network_from, network_to in networks.items():
@@ -256,7 +257,7 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
             self.wallet_view.select_network(network_to)
             self.wallet_view.set_amount(amount)
             data_to_check = {
-                'Max fees': r"[$]\d+.\d+",
+                'Max fees': r"<?[$|€]\d+.\d+",
                 'Bridged to %s' % network_to: r"0.000\d+ ETH"
             }
             for key, expected_value in data_to_check.items():
@@ -324,7 +325,7 @@ class TestWalletOneDevice(MultipleSharedDeviceTestCase):
                 network_to_short_name = network_to
             data_to_check = {
                 'Est. time': r'~\d+ sec',
-                'Max fees': r"[$]\d+.\d+",
+                'Max fees': r"<?[$|€]\d+.\d+",
                 'Bridged to %s' % network_to_short_name: r"0.000\d+ ETH"
             }
             for key, expected_value in data_to_check.items():

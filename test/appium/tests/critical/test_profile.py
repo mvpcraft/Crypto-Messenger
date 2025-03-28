@@ -12,7 +12,7 @@ from users import transaction_senders
 from views.sign_in_view import SignInView
 
 
-@pytest.mark.xdist_group(name="new_one_1")  # ToDo: find group
+@pytest.mark.xdist_group(name="one_1")  # ToDo: find group
 @marks.nightly
 class TestProfileOneDevice(MultipleSharedDeviceTestCase):
 
@@ -73,7 +73,7 @@ class TestProfileOneDevice(MultipleSharedDeviceTestCase):
         self.errors.verify_no_errors()
 
 
-@pytest.mark.xdist_group(name="new_three_2")  # ToDo find group
+@pytest.mark.xdist_group(name="five_2")
 @marks.nightly
 class TestProfileMultipleDevices(MultipleSharedDeviceTestCase):
 

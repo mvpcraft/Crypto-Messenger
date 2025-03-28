@@ -1,4 +1,6 @@
+import datetime
 import time
+from typing import Literal
 
 import pytest
 from selenium.common import NoSuchElementException
@@ -8,8 +10,6 @@ from views.base_element import Button, EditBox, Text, BaseElement
 from views.base_view import BaseView
 from views.home_view import HomeView
 from views.sign_in_view import SignInView
-from typing import Literal
-import datetime
 
 
 class AssetElement(Button):
@@ -191,8 +191,10 @@ class WalletView(BaseView):
 
     def set_network_in_wallet(self, network_name: str):
         self.network_drop_down.click()
-        Button(self.driver, accessibility_id="%s, label-component" % network_name).click()
+        element = Button(self.driver, accessibility_id="%s, label-component" % network_name)
+        element.click()
         self.network_drop_down.click()
+        element.wait_for_invisibility_of_element()
 
     def get_account_element(self, account_name: str = 'Account 1'):
         return Button(self.driver, xpath="//android.view.ViewGroup[contains(@content-desc,'%s')]" % account_name)
@@ -251,6 +253,8 @@ class WalletView(BaseView):
         self.confirm_transaction()
 
     def add_regular_account(self, account_name: str):
+        if not self.add_account_button.is_element_displayed():
+            self.get_account_element().swipe_left_on_element()
         self.add_account_button.click()
         self.create_account_button.click()
         derivation_path = self.add_account_derivation_path_text.text
@@ -353,7 +357,6 @@ class WalletView(BaseView):
     def round_amount_float(amount, decimals=4):
         return round(float(amount), decimals)
 
-
     def wait_for_wallet_balance_to_update(self, expected_amount, asset='Ether', decimals=4):
         self.just_fyi(f"Checking {asset} balance, expected value: {expected_amount}")
 
@@ -374,11 +377,11 @@ class WalletView(BaseView):
         raise TimeoutError(error_message)
 
     def check_last_transaction_in_activity(self, device_time, amount,
-                                            asset='ETH',
-                                            to_account='',
-                                            tx_type: Literal['Send', 'Receive'] = 'Send',
-                                            from_account_name='Account 1',
-                                            network='Status Network'):
+                                           asset='ETH',
+                                           to_account='',
+                                           tx_type: Literal['Send', 'Receive'] = 'Send',
+                                           from_account_name='Account 1',
+                                           network='Status Network'):
         errors = list()
 
         self.just_fyi("Checking the last transaction in the activity tab")
@@ -421,5 +424,3 @@ class WalletView(BaseView):
     def get_balance(self, asset='Ether'):
         self.just_fyi("Getting %s amount of the wallet of the sender before transaction" % asset)
         return self.get_asset(asset_name=asset).get_amount()
-
-

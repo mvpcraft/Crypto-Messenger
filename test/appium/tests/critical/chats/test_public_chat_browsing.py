@@ -15,7 +15,7 @@ from views.dbs.waku_backup import user as waku_user
 from views.sign_in_view import SignInView
 
 
-@pytest.mark.xdist_group(name="new_one_1")
+@pytest.mark.xdist_group(name="two_1")
 @marks.nightly
 class TestCommunityOneDeviceMerged(MultipleSharedDeviceTestCase):
 
@@ -305,7 +305,7 @@ class TestCommunityOneDeviceMerged(MultipleSharedDeviceTestCase):
         # Note: this test should always be the LAST ONE in the group because it turns on mainnet in the app!
 
 
-@pytest.mark.xdist_group(name="new_three_2")
+@pytest.mark.xdist_group(name="one_2")
 @marks.nightly
 class TestCommunityMultipleDeviceMerged(MultipleSharedDeviceTestCase):
 
@@ -846,7 +846,7 @@ class TestCommunityMultipleDeviceMerged(MultipleSharedDeviceTestCase):
         self.errors.verify_no_errors()
 
 
-@pytest.mark.xdist_group(name="new_five_2")
+@pytest.mark.xdist_group(name="two_2")
 @marks.nightly
 class TestCommunityMultipleDeviceMergedTwo(MultipleSharedDeviceTestCase):
 
@@ -1245,7 +1245,7 @@ class TestCommunityMultipleDeviceMergedTwo(MultipleSharedDeviceTestCase):
         self.errors.verify_no_errors()
 
 
-@pytest.mark.xdist_group(name="new_three_2")
+@pytest.mark.xdist_group(name="six_2")
 @marks.nightly
 class TestCommunityMultipleDeviceMergedThree(MultipleSharedDeviceTestCase):
 

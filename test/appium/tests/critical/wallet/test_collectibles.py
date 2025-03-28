@@ -10,7 +10,7 @@ from users import transaction_senders
 from views.sign_in_view import SignInView
 
 
-@pytest.mark.xdist_group(name="new_one_2")
+@pytest.mark.xdist_group(name="six_2")
 @marks.nightly
 @marks.secured
 @marks.smoke
@@ -123,7 +123,7 @@ class TestWalletCollectibles(MultipleSharedDeviceTestCase):
                 )
         data_to_check = {
             'Est. time': r'~\d+ sec',
-            'Max fees': r"[$]\d+.\d+",
+            'Max fees': r"<?[$€]\d+.\d+",
             'Recipient gets': '1 '
         }
         for key, expected_value in data_to_check.items():
@@ -176,7 +176,7 @@ class TestWalletCollectibles(MultipleSharedDeviceTestCase):
                 )
         data_to_check = {
             'Est. time': r'~\d+ sec',
-            'Max fees': r"[$]\d+.\d+",
+            'Max fees': r"<?[$€]\d+.\d+",
             'Recipient gets': '1 '
         }
         for key, expected_value in data_to_check.items():

@@ -8,7 +8,7 @@ from tests.users import transaction_senders
 from views.sign_in_view import SignInView
 
 
-@pytest.mark.xdist_group(name="new_two_2")
+@pytest.mark.xdist_group(name="three_2")
 @marks.nightly
 class TestActivityCenterContactRequestMultipleDevicePR(MultipleSharedDeviceTestCase):
 
@@ -231,7 +231,7 @@ class TestActivityCenterContactRequestMultipleDevicePR(MultipleSharedDeviceTestC
         self.errors.verify_no_errors()
 
 
-@pytest.mark.xdist_group(name="new_four_2")
+@pytest.mark.xdist_group(name="four_2")
 @marks.nightly
 class TestActivityMultipleDevicePR(MultipleSharedDeviceTestCase):
 

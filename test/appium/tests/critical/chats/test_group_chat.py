@@ -11,7 +11,7 @@ from views.chat_view import ChatView
 from views.sign_in_view import SignInView
 
 
-@pytest.mark.xdist_group(name="new_one_3")
+@pytest.mark.xdist_group(name="one_3")
 @marks.nightly
 class TestGroupChatMultipleDeviceMergedNewUI(MultipleSharedDeviceTestCase):
 

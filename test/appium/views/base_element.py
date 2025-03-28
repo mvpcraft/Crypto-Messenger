@@ -5,13 +5,13 @@ from io import BytesIO
 
 import emoji
 import imagehash
+import webcolors
 from PIL import Image, ImageChops, ImageStat
 from appium.webdriver.common.mobileby import MobileBy
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, TimeoutException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
-import webcolors
 
 from tests import transl
 
@@ -182,7 +182,9 @@ class BaseElement(object):
         self.driver.fail(message if message else "`%s` is not equal to expected `%s` in %s sec" % (
             element_text, text, wait_time))
 
-    def scroll_to_element(self, depth: int = 9, direction='down', down_start_y=0.4, down_end_y=0.05):
+    def scroll_to_element(self, depth: int = 9, direction='down',
+                          down_start_y=0.4, down_end_y=0.05,
+                          right_start_x=0.9, right_end_x=0.1):
         self.driver.info('Scrolling %s to %s' % (direction, self.name))
         for _ in range(depth):
             try:
@@ -191,8 +193,13 @@ class BaseElement(object):
                 size = self.driver.get_window_size()
                 if direction == 'down':
                     self.driver.swipe(500, size["height"] * down_start_y, 500, size["height"] * down_end_y)
-                else:
+                elif direction == 'up':
                     self.driver.swipe(500, size["height"] * 0.25, 500, size["height"] * 0.8)
+                elif direction == 'right':
+                    y = size["height"] * down_start_y
+                    self.driver.swipe(size["width"] * right_start_x, y, size["width"] * right_end_x, y)
+                else:
+                    raise ValueError("Unsupported scroll direction: %s" % direction)
         else:
             raise NoSuchElementException(
                 "Device %s: %s by %s: `%s` is not found on the screen" % (

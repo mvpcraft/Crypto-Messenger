@@ -8,7 +8,7 @@ from users import transaction_senders
 from views.sign_in_view import SignInView
 
 
-@pytest.mark.xdist_group(name="new_seven_3")
+@pytest.mark.xdist_group(name="one_3")
 @marks.nightly
 @marks.secured
 class TestFallbackMultipleDevice(MultipleSharedDeviceTestCase):

@@ -12,7 +12,7 @@ from views.base_element import Button
 from views.sign_in_view import SignInView
 
 
-@pytest.mark.xdist_group(name="new_one_2")
+@pytest.mark.xdist_group(name="three_2")
 @marks.nightly
 class TestOneToOneChatMultipleSharedDevicesNewUi(MultipleSharedDeviceTestCase):
 
@@ -546,7 +546,7 @@ class TestOneToOneChatMultipleSharedDevicesNewUi(MultipleSharedDeviceTestCase):
         self.errors.verify_no_errors()
 
 
-@pytest.mark.xdist_group(name="new_six_2")
+@pytest.mark.xdist_group(name="four_2")
 @marks.nightly
 class TestOneToOneChatMultipleSharedDevicesNewUiTwo(MultipleSharedDeviceTestCase):
 

@@ -200,10 +200,6 @@ class Errors:
         else:
             raise TypeError(f"Invalid type for errors: {type(errors)}. Expected str or list of str.")
 
-
-
-
-
     def verify_no_errors(self):
         if self.errors:
             pytest.fail('\n '.join([self.errors.pop(0) for _ in range(len(self.errors))]))
