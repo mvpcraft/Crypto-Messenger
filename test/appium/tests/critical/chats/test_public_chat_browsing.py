@@ -160,7 +160,6 @@ class TestCommunityOneDeviceMerged(MultipleSharedDeviceTestCase):
         self.errors.verify_no_errors()
 
     @marks.testrail_id(703133)
-    @marks.smoke
     def test_restore_multiaccount_with_waku_backup_remove_profile_switch(self):
         self.home.reopen_app(sign_in=False)
         self.home.just_fyi("Restore user with predefined communities and contacts")

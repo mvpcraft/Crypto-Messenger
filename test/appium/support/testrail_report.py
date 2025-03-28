@@ -1,5 +1,4 @@
 import base64
-import itertools
 import json
 import logging
 from json import JSONDecodeError
@@ -22,7 +21,6 @@ class TestrailReport(BaseTestReport):
         self.user = environ.get('TESTRAIL_USER')
 
         self.run_id = None
-        # self.suite_id = 48
         self.suite_id = 5274
         self.project_id = 14
 
@@ -97,42 +95,24 @@ class TestrailReport(BaseTestReport):
             print("TestRail error when creating a run: %s" % run)
         print("Testrun: %sruns/view/%s" % (self.url, self.run_id))
 
-    def get_cases(self, section_ids):
-        test_cases = list()
-        for section_id in section_ids:
-            test_cases.append(
-                self.get('get_cases/%s&suite_id=%s&section_id=%s' % (self.project_id, self.suite_id, section_id))[
-                    'cases'])
-        return itertools.chain.from_iterable(test_cases)
+    def get_cases(self, section_id):
+        return self.get('get_cases/%s&suite_id=%s&section_id=%s' % (self.project_id, self.suite_id, section_id))[
+            'cases']
 
     def get_regression_cases(self):
-        test_cases = dict()
-        test_cases['pr'] = dict()
-        test_cases['nightly'] = dict()
-        test_cases['upgrade'] = dict()
-
-        # PR e2e
-        test_cases['pr']['critical'] = 50955
-        # test_cases['pr']['one_to_one_chat'] = 50956
-        # test_cases['pr']['community_single'] = 50983
-        test_cases['pr']['wallet'] = 59443
-
-        # Nightly e2e
-        test_cases['nightly']['critical'] = 50955
-        test_cases['nightly']['one_to_one_chat'] = 50956
-        test_cases['nightly']['deep_links'] = 51535
-        test_cases['nightly']['group_chat'] = 50964
-        test_cases['nightly']['community_single'] = 50983
-        test_cases['nightly']['community_multiple'] = 50982
-        test_cases['nightly']['activity_centre_contact_request'] = 50984
-        test_cases['nightly']['activity_centre_other'] = 51005
-        test_cases['nightly']['wallet'] = 59443
-        test_cases['nightly']['fallback'] = 63472
-        test_cases['nightly']['android_versions'] = 63809
-        test_cases['nightly']['profile'] = 63854
-
-        ## Upgrade e2e
-        # test_cases['upgrade']['general'] = 881
+        test_categories = dict()
+        test_categories['all'] = 50955
+        test_categories['one_to_one_chat'] = 50956
+        test_categories['group_chat'] = 50964
+        test_categories['community_multiple'] = 50982
+        test_categories['community_single'] = 50983
+        test_categories['activity_centre_contact_request'] = 50984
+        test_categories['activity_centre_other'] = 51005
+        test_categories['deep_links'] = 51535
+        test_categories['wallet'] = 59443
+        test_categories['fallback'] = 63472
+        test_categories['android_versions'] = 63809
+        test_categories['profile'] = 63854
 
         case_ids = list()
         for arg in argv:
@@ -141,15 +121,11 @@ class TestrailReport(BaseTestReport):
                 case_ids = value.split(',')
         if len(case_ids) == 0:
             if 'smoke' in argv:
-                for category in test_cases['pr']:
-                    for case in self.get_cases([test_cases['pr'][category]]):
-                        case_ids.append(case['id'])
-                case_ids.extend([703133, 702742, 702745, 702843])
-            # elif 'nightly' in argv:
+                for category in test_categories.values():
+                    case_ids.extend([case['id'] for case in self.get_cases(category) if case['type_id'] == 11])
             else:
-                for category in test_cases['nightly']:
-                    for case in self.get_cases([test_cases['nightly'][category]]):
-                        case_ids.append(case['id'])
+                for category in test_categories.values():
+                    case_ids.extend([case['id'] for case in self.get_cases(category)])
         return case_ids
 
     def add_results(self):
