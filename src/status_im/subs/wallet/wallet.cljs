@@ -5,6 +5,7 @@
             [status-im.constants :as constants]
             [status-im.contexts.wallet.common.utils :as utils]
             [status-im.contexts.wallet.common.utils.networks :as network-utils]
+            [status-im.contexts.wallet.networks.core :as networks]
             [status-im.contexts.wallet.send.utils :as send-utils]
             [status-im.contexts.wallet.sheets.missing-keypair.view :as missing-keypair]
             [status-im.subs.wallet.add-account.address-to-watch]
@@ -325,11 +326,9 @@
 (rf/reg-sub
  :wallet/selected-networks->chain-ids
  :<- [:wallet/selected-networks]
- :<- [:profile/test-networks-enabled?]
- (fn [[selected-networks testnet-enabled?]]
-   (set (map #(network-utils/network->chain-id
-               {:network          %
-                :testnet-enabled? testnet-enabled?})
+ :<- [:wallet/network-details]
+ (fn [[selected-networks networks]]
+   (set (map (partial networks/get-chain-id networks)
              selected-networks))))
 
 (defn- format-settings-keypair-accounts
@@ -954,11 +953,8 @@
       (fn [account]
         (let [tokens            (:tokens account)
               filtered-tokens   (filter #(= (:symbol %) token-symbol) tokens)
-              asset-pay-balance (utils/calculate-total-token-balance filtered-tokens)
-              formatted-address (network-utils/format-address (:address account)
-                                                              (:network-preferences-names account))]
+              asset-pay-balance (utils/calculate-total-token-balance filtered-tokens)]
           (assoc account
-                 :formatted-address formatted-address
                  :asset-pay-balance (utils/sanitized-token-amount-to-display
                                      asset-pay-balance
                                      constants/min-token-decimals-to-display)

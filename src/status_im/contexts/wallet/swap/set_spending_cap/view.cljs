@@ -7,7 +7,6 @@
     [status-im.common.events-helper :as events-helper]
     [status-im.common.floating-button-page.view :as floating-button-page]
     [status-im.contexts.wallet.common.utils :as utils]
-    [status-im.contexts.wallet.common.utils.external-links :as external-links]
     [status-im.contexts.wallet.swap.set-spending-cap.style :as style]
     [utils.address :as address-utils]
     [utils.i18n :as i18n]
@@ -103,20 +102,21 @@
                            :customization-color (:color account)}}])]))
 
 (defn- on-option-press
-  [{:keys [chain-id contract-address]}]
-  (rf/dispatch
-   [:show-bottom-sheet
-    {:content (fn []
-                [quo/action-drawer
-                 [[{:icon                :i/link
-                    :accessibility-label :view-on-etherscan
-                    :on-press            (fn []
-                                           (rf/dispatch
-                                            [:wallet/navigate-to-chain-explorer-from-bottom-sheet
-                                             (external-links/get-explorer-url-by-chain-id chain-id)
-                                             contract-address]))
-                    :label               (i18n/label :t/view-on-eth)
-                    :right-icon          :i/external}]]])}]))
+  [{:keys [network contract-address]}]
+  (let [{:keys [chain-id block-explorer-name]} network]
+    (rf/dispatch
+     [:show-bottom-sheet
+      {:content (fn []
+                  [quo/action-drawer
+                   [[{:icon                :i/link
+                      :accessibility-label :view-on-block-explorer
+                      :on-press            (fn []
+                                             (rf/dispatch
+                                              [:wallet/navigate-to-chain-explorer chain-id
+                                               contract-address]))
+                      :label               (i18n/label :t/view-address-on-block-explorer
+                                                       {:block-explorer-name block-explorer-name})
+                      :right-icon          :i/external}]]])}])))
 
 (defn- token-section
   []
@@ -137,7 +137,7 @@
        [quo/approval-info
         {:type            :token-contract
          :option-icon     :i/options
-         :on-option-press #(on-option-press {:chain-id         network-chain-id
+         :on-option-press #(on-option-press {:network          network
                                              :contract-address pay-token-address})
          :unlimited-icon? false
          :label           pay-token-symbol
@@ -150,8 +150,7 @@
         network                  (rf/sub [:wallet/swap-network])
         provider                 (rf/sub [:wallet/swap-proposal-provider])
         spender-contract-address (or (rf/sub [:wallet/swap-proposal-approval-contract-address])
-                                     (:contract-address provider))
-        network-chain-id         (:chain-id network)]
+                                     (:contract-address provider))]
     [rn/view {:style style/summary-section-container}
      [quo/text
       {:size                :paragraph-2
@@ -163,7 +162,7 @@
        [quo/approval-info
         {:type            :token-contract
          :option-icon     :i/options
-         :on-option-press #(on-option-press {:chain-id         network-chain-id
+         :on-option-press #(on-option-press {:network          network
                                              :contract-address spender-contract-address})
          :unlimited-icon? false
          :label           (:full-name provider)

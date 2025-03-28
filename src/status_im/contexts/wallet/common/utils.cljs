@@ -1,9 +1,9 @@
 (ns status-im.contexts.wallet.common.utils
   (:require [clojure.string :as string]
             [quo.foundations.resources :as resources]
-            [status-im.common.qr-codes.view :as qr-codes]
             [status-im.constants :as constants]
             [status-im.contexts.wallet.common.utils.networks :as network-utils]
+            [status-im.contexts.wallet.networks.core :as networks]
             [utils.address]
             [utils.money :as money]
             [utils.number :as number]
@@ -260,15 +260,6 @@
         {})
        vals))
 
-(defn get-wallet-qr
-  [{:keys [wallet-type selected-networks address]}]
-  (if (= wallet-type :multichain)
-    (as-> selected-networks $
-      (map qr-codes/get-network-short-name-url $)
-      (apply str $)
-      (str $ address))
-    address))
-
 (defn fiat-formatted-for-ui
   [currency-symbol fiat-value]
   (cond
@@ -330,27 +321,15 @@
                            :fiat-change            formatted-fiat-change
                            :percentage-change      percentage-change}}))
 
-(defn get-multichain-address
-  [networks address]
-  (str (->> networks
-            (map #(str (:short-name %) ":"))
-            (clojure.string/join ""))
-       address))
-
-(defn split-prefix-and-address
-  [input-string]
-  (let [split-result (string/split input-string #"0x")]
-    [(first split-result) (str "0x" (second split-result))]))
-
 (defn make-network-item
   "This function generates props for quo/category component item"
-  [{:keys [network-name full-name color on-change networks label-props type blur?]}]
+  [{:keys [chain-id network-name full-name color on-change networks label-props type blur?]}]
   (cond-> {:title                 full-name
            :image                 :icon-avatar
            :image-props           {:icon (resources/get-network network-name)
                                    :size :size-20}
            ;; Remove the following line for v2.35
-           :show-new-feature-tag? (= network-name constants/base-network-name)
+           :show-new-feature-tag? (networks/new-network? chain-id)
            :action                :selector
            :action-props          {:type                (or type :checkbox)
                                    :blur?               blur?

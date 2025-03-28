@@ -7,15 +7,16 @@
     [react-native.platform :as platform]
     [status-im.constants :as constants]
     [status-im.contexts.network.data-store :as network.data-store]
+    [status-im.contexts.profile.db :as profile.db]
     [status-im.contexts.settings.wallet.effects]
     [status-im.contexts.settings.wallet.events]
     [status-im.contexts.wallet.common.activity-tab.events]
     [status-im.contexts.wallet.common.utils :as utils]
-    [status-im.contexts.wallet.common.utils.external-links :as external-links]
-    [status-im.contexts.wallet.common.utils.networks :as network-utils]
     [status-im.contexts.wallet.data-store :as data-store]
     [status-im.contexts.wallet.db-path :as db-path]
     [status-im.contexts.wallet.item-types :as item-types]
+    [status-im.contexts.wallet.networks.db :as networks.db]
+    status-im.contexts.wallet.networks.events
     [status-im.contexts.wallet.sheets.network-selection.view :as network-selection]
     [status-im.contexts.wallet.tokens.events]
     [status-im.feature-flags :as ff]
@@ -383,11 +384,7 @@
                                         (filter #(not= (:balance %) "0")
                                                 (vals (:balances-per-chain token))))
          balance-in-only-one-network? (when networks-with-balance (= (count networks-with-balance) 1))
-         test-networks-enabled?       (get-in db [:profile/profile :test-networks-enabled?])
-         network-details              (-> (get-in db
-                                                  [:wallet :networks
-                                                   (if test-networks-enabled? :test :prod)])
-                                          (network-utils/sorted-networks-with-details))
+         network-details              (networks.db/get-networks db)
          network                      (if balance-in-only-one-network?
                                         (first (filter #(= (:chain-id %)
                                                            (:chain-id (first networks-with-balance)))
@@ -455,29 +452,6 @@
             :flow-id        :wallet-bridge-flow}]]]}))
 
 (rf/reg-event-fx
- :wallet/get-ethereum-chains
- (fn [_]
-   {:json-rpc/call
-    [{:method     "wallet_getEthereumChains"
-      :params     []
-      :on-success [:wallet/get-ethereum-chains-success]
-      :on-error   [:wallet/log-rpc-error {:event :wallet/get-ethereum-chains}]}]}))
-
-(rf/reg-event-fx
- :wallet/get-ethereum-chains-success
- (fn [{:keys [db]} [data]]
-   (let [network-data           (data-store/rpc->networks data)
-         test-networks-enabled? (get-in db [:profile/profile :test-networks-enabled?])
-         default-network-names  (->> (get network-data (if test-networks-enabled? :test :prod))
-                                     (map #(-> % :chain-id network-utils/id->network))
-                                     set)]
-     {:db (-> db
-              (assoc-in [:wallet :networks] network-data)
-              (assoc-in [:wallet :ui :network-filter :default-networks] default-network-names))
-      :fx [[:dispatch [:wallet.tokens/get-token-list]]
-           [:dispatch [:wallet/reset-selected-networks]]]})))
-
-(rf/reg-event-fx
  :wallet/find-ens
  (fn [{:keys [db]} [input contacts on-error-fn]]
    (let [result (if (empty? input)
@@ -497,7 +471,7 @@
    (let [ens      (if (string/includes? input ".")
                     input
                     (str input domain))
-         chain-id (network-utils/network->chain-id db :mainnet)]
+         chain-id (networks.db/get-chain-id db :mainnet)]
      {:fx [[:json-rpc/call
             [{:method     "ens_addressOf"
               :params     [chain-id ens]
@@ -548,20 +522,6 @@
  (fn [{:keys [db]}]
    {:db (assoc-in db [:wallet :ui :search-address :loading?] true)}))
 
-(rf/reg-event-fx
- :wallet/navigate-to-chain-explorer-from-bottom-sheet
- (fn [_ [explorer-link address]]
-   {:fx [[:dispatch [:hide-bottom-sheet]]
-         [:dispatch [:browser.ui/open-url (str explorer-link "/" address)]]]}))
-
-(rf/reg-event-fx
- :wallet/navigate-to-chain-explorer
- (fn [{:keys [db]} [{:keys [network chain-id address]}]]
-   (let [chain-id      (or chain-id (network-utils/network->chain-id db network))
-         explorer-link (external-links/get-explorer-url-by-chain-id chain-id)]
-     {:fx [[:dispatch [:hide-bottom-sheet]]
-           [:dispatch [:browser.ui/open-url (str explorer-link "/" address)]]]})))
-
 (rf/reg-event-fx :wallet/reload
  (fn [{:keys [db]}]
    (let [supported-chains-by-symbol (get-in db [:wallet :tokens :supported-chains-by-symbol])
@@ -608,23 +568,23 @@
 (rf/reg-event-fx
  :wallet/blockchain-status-changed
  (fn [{:keys [db]} [{:keys [message]}]]
-   (let [chains                  (-> (transforms/json->clj message)
-                                     (update-keys (comp utils.number/parse-int name)))
-         down-chain-ids          (-> (select-keys chains
-                                                  (for [[k v] chains :when (= v "down")] k))
-                                     keys)
-         test-networks-enabled?  (get-in db [:profile/profile :test-networks-enabled?])
-         chain-ids-by-mode       (network-utils/get-default-chain-ids-by-mode
-                                  {:test-networks-enabled? test-networks-enabled?})
-         chains-filtered-by-mode (remove #(not (contains? chain-ids-by-mode %)) down-chain-ids)
-         chains-down?            (and (network.data-store/online? db) (seq chains-filtered-by-mode))
-         chain-names             (when chains-down?
-                                   (->> (map #(-> (network-utils/id->network %)
-                                                  name
-                                                  string/capitalize)
-                                             chains-filtered-by-mode)
-                                        distinct
-                                        (string/join ", ")))]
+   (let [chains                 (-> (transforms/json->clj message)
+                                    (update-keys (comp utils.number/parse-int name)))
+         down-chain-ids         (-> (select-keys chains
+                                                 (for [[k v] chains :when (= v "down")] k))
+                                    keys)
+         test-networks-enabled? (profile.db/testnet? db)
+         chain-ids              (networks.db/get-chain-ids db)
+         chains-filtered        (remove #(not
+                                          (contains? chain-ids %))
+                                        down-chain-ids)
+         chains-down?           (and (network.data-store/online? db) (seq chains-filtered))
+         chain-names            (when chains-down?
+                                  (->> (map (partial networks.db/get-network-details db)
+                                            chains-filtered)
+                                       (map :full-name)
+                                       distinct
+                                       (string/join ", ")))]
      (when (seq down-chain-ids)
        (log/info "[wallet] Chain(s) down: " down-chain-ids)
        (log/info "[wallet] Chain name(s) down: " chain-names)
@@ -687,7 +647,7 @@
 (rf/reg-event-fx
  :wallet/resolve-ens
  (fn [{db :db} [{:keys [ens on-success on-error]}]]
-   (let [chain-id (network-utils/network->chain-id db constants/mainnet-network-name)]
+   (let [chain-id (networks.db/get-chain-id db :mainnet)]
      {:fx [[:json-rpc/call
             [{:method     "ens_addressOf"
               :params     [chain-id ens]

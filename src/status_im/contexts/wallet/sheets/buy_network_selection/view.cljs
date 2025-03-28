@@ -1,19 +1,18 @@
 (ns status-im.contexts.wallet.sheets.buy-network-selection.view
   (:require [quo.core :as quo]
-            [quo.foundations.resources :as quo.resources]
             [react-native.core :as rn]
-            [status-im.constants :as constants]
+            [status-im.contexts.wallet.networks.core :as networks]
             [status-im.contexts.wallet.sheets.buy-network-selection.style :as style]
             [utils.i18n :as i18n]
             [utils.re-frame :as rf]))
 
 (defn- network-item
   [{:keys [network on-select-network]}]
-  (let [{:keys [network-name]} network
-        mainnet?               (= network-name constants/mainnet-network-name)]
+  (let [{:keys [source full-name]} network
+        mainnet?                   (networks/eth-mainnet? network)]
     [quo/network-list
-     {:label           (name network-name)
-      :network-image   (quo.resources/get-network network-name)
+     {:label           full-name
+      :network-image   source
       :on-press        #(on-select-network network)
       :container-style (style/network-list-container mainnet?)}]))
 

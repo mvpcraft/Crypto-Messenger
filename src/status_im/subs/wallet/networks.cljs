@@ -10,17 +10,16 @@
  :-> :networks)
 
 (re-frame/reg-sub
- :wallet/networks-by-mode
+ :wallet/networks-by-id
+ :<- [:wallet]
+ :-> :networks-by-id)
+
+(re-frame/reg-sub
+ :wallet/network-details
  :<- [:wallet/networks]
  :<- [:profile/test-networks-enabled?]
  (fn [[networks test-networks-enabled?]]
    (get networks (if test-networks-enabled? :test :prod))))
-
-(re-frame/reg-sub
- :wallet/network-details
- :<- [:wallet/networks-by-mode]
- (fn [networks]
-   (network-utils/sorted-networks-with-details networks)))
 
 (re-frame/reg-sub
  :wallet/network-details-by-network-name
@@ -35,9 +34,15 @@
 
 (re-frame/reg-sub
  :wallet/network-details-by-chain-id
- :<- [:wallet/network-details]
+ :<- [:wallet/networks-by-id]
  (fn [networks [_ chain-id]]
-   (some #(when (= chain-id (:chain-id %)) %) networks)))
+   (get networks chain-id)))
+
+(re-frame/reg-sub
+ :wallet/network-name-from-chain-id
+ :<- [:wallet/networks-by-id]
+ (fn [networks [_ chain-id]]
+   (-> networks (get chain-id) :network-name)))
 
 (re-frame/reg-sub
  :wallet/selected-network-details
@@ -49,14 +54,10 @@
     network-details)))
 
 (re-frame/reg-sub
- :wallet/account-address
- (fn [_ [_ address network-preferences]]
-   (network-utils/format-address address network-preferences)))
-
-(re-frame/reg-sub
  :wallet/network-values
+ :<- [:wallet/networks-by-id]
  :<- [:wallet/wallet-send]
- (fn [{:keys [from-values-by-chain to-values-by-chain token-display-name token] :as send-data}
+ (fn [[networks {:keys [from-values-by-chain to-values-by-chain token-display-name token] :as send-data}]
       [_ to-values?]]
    (let [network-values (if to-values? to-values-by-chain from-values-by-chain)
          token-symbol   (or token-display-name
@@ -64,19 +65,18 @@
          token-decimals (:decimals token)]
      (reduce-kv
       (fn [acc chain-id amount]
-        (let [network-name (network-utils/id->network chain-id)
+        (let [network-name (-> networks (get chain-id) :network-name)
               amount-fixed (number/to-fixed (money/->bignumber amount) token-decimals)]
-          (assoc acc
-                 (if (= network-name :mainnet) :ethereum network-name)
-                 {:amount amount-fixed :token-symbol token-symbol})))
+          (merge acc (network-utils/network-summary network-name token-symbol amount-fixed))))
       {}
       network-values))))
 
 (re-frame/reg-sub
  :wallet/send-selected-network
+ :<- [:wallet/networks-by-id]
  :<- [:wallet/wallet-send]
- (fn [{:keys [to-values-by-chain]}]
-   (-> to-values-by-chain
-       keys
-       first
-       network-utils/get-network-details)))
+ (fn [[networks {:keys [to-values-by-chain]}]]
+   (->> to-values-by-chain
+        keys
+        first
+        (get networks))))

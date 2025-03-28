@@ -2,7 +2,6 @@
   (:require [clojure.string :as string]
             [status-im.config :as config]
             [status-im.constants :as constants]
-            [status-im.contexts.wallet.common.utils.networks :as network-utils]
             [taoensso.timbre :as log]
             [utils.number :as utils.number]))
 
@@ -42,10 +41,9 @@
   (when (> total 1) (str "x" total)))
 
 (defn- get-opensea-network-name
-  [chain-id test-networks-enabled?]
-  (let [network-kw   (network-utils/id->network chain-id)
-        network-name (name network-kw)
-        mainnet?     (= :mainnet network-kw)]
+  [network-name test-networks-enabled?]
+  (let [mainnet?     (= :mainnet network-name)
+        network-name (name network-name)]
     (cond (and test-networks-enabled? mainnet?)
           (:sepolia constants/opensea-url-names)
 
@@ -65,10 +63,10 @@
     :else                  config/opensea-link))
 
 (defn get-opensea-collectible-url
-  [{:keys [chain-id token-id contract-address
+  [{:keys [network-name token-id contract-address
            test-networks-enabled?]}]
   (let [base-link            (get-opensea-base-url test-networks-enabled?)
-        opensea-network-name (get-opensea-network-name chain-id
+        opensea-network-name (get-opensea-network-name network-name
                                                        test-networks-enabled?)]
     (str base-link "/assets/" opensea-network-name "/" contract-address "/" token-id)))
 

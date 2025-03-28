@@ -3,7 +3,6 @@
     [quo.core :as quo]
     [react-native.clipboard :as clipboard]
     [react-native.core :as rn]
-    [status-im.config :as config]
     [status-im.contexts.profile.utils :as profile.utils]
     [status-im.contexts.shell.constants :as constants]
     [status-im.contexts.wallet.account.tabs.about.style :as style]
@@ -11,74 +10,47 @@
     [utils.i18n :as i18n]
     [utils.re-frame :as rf]))
 
+(defn chain-explorer-options
+  [address network-details]
+  (map (fn [{:keys [chain-id block-explorer-name]}]
+         {:icon                :i/link
+          :accessibility-label :view-on-block-explorer
+          :label               (i18n/label :t/view-on-block-explorer
+                                           {:block-explorer-name block-explorer-name})
+          :right-icon          :i/external
+          :on-press            #(rf/dispatch
+                                 [:wallet/navigate-to-chain-explorer chain-id address])})
+       network-details))
+
 (defn about-options
   []
   (let [{:keys [address] :as account} (rf/sub [:wallet/current-viewing-account])
-        share-title                   (str (:name account) " " (i18n/label :t/address))
-        testnet-mode?                 (rf/sub [:profile/test-networks-enabled?])]
+        network-details               (rf/sub [:wallet/network-details])
+        share-title                   (str (:name account) " " (i18n/label :t/address))]
     [quo/action-drawer
-     [[{:icon                :i/link
-        :accessibility-label :view-on-eth
-        :label               (i18n/label :t/view-on-eth)
-        :right-icon          :i/external
-        :on-press            #(rf/dispatch
-                               [:wallet/navigate-to-chain-explorer-from-bottom-sheet
-                                config/mainnet-chain-explorer-link
-                                address])}
-       {:icon                :i/link
-        :accessibility-label :view-on-oeth
-        :label               (i18n/label :t/view-on-oeth)
-        :right-icon          :i/external
-        :on-press            #(rf/dispatch
-                               [:wallet/navigate-to-chain-explorer-from-bottom-sheet
-                                config/optimism-mainnet-chain-explorer-link
-                                address])}
-       {:icon                :i/link
-        :accessibility-label :view-on-arb
-        :label               (i18n/label :t/view-on-arb)
-        :right-icon          :i/external
-        :on-press            #(rf/dispatch
-                               [:wallet/navigate-to-chain-explorer-from-bottom-sheet
-                                config/arbitrum-mainnet-chain-explorer-link
-                                address])}
-       {:icon                :i/link
-        :accessibility-label :view-on-base
-        :label               (i18n/label :t/view-on-base)
-        :right-icon          :i/external
-        :on-press            #(rf/dispatch
-                               [:wallet/navigate-to-chain-explorer-from-bottom-sheet
-                                config/base-mainnet-chain-explorer-link
-                                address])}
-       (when testnet-mode?
-         {:icon                :i/link
-          :accessibility-label :view-on-status-explorer
-          :label               (i18n/label :t/view-on-status-explorer)
-          :right-icon          :i/external
-          :on-press            #(rf/dispatch
-                                 [:wallet/navigate-to-chain-explorer-from-bottom-sheet
-                                  config/status-network-sepolia-chain-explorer-base-link
-                                  address])})
-       {:icon                :i/copy
-        :accessibility-label :copy-address
-        :label               (i18n/label :t/copy-address)
-        :on-press            (fn []
-                               (clipboard/set-string address)
-                               (rf/dispatch [:toasts/upsert
-                                             {:type :positive
-                                              :text (i18n/label :t/address-copied)}]))}
-       {:icon                :i/qr-code
-        :accessibility-label :show-address-qr
-        :label               (i18n/label :t/show-address-qr)
-        :on-press            #(rf/dispatch [:open-modal :screen/wallet.share-address {:status :share}])}
-       {:icon                :i/share
-        :accessibility-label :share-address
-        :label               (i18n/label :t/share-address)
-        :on-press            (fn []
-                               (rf/dispatch [:hide-bottom-sheet])
-                               (js/setTimeout
-                                #(rf/dispatch [:wallet/share-account
-                                               {:title share-title :content address}])
-                                600))}]]]))
+     [(concat (chain-explorer-options address network-details)
+              [{:icon                :i/copy
+                :accessibility-label :copy-address
+                :label               (i18n/label :t/copy-address)
+                :on-press            (fn []
+                                       (clipboard/set-string address)
+                                       (rf/dispatch [:toasts/upsert
+                                                     {:type :positive
+                                                      :text (i18n/label :t/address-copied)}]))}
+               {:icon                :i/qr-code
+                :accessibility-label :show-address-qr
+                :label               (i18n/label :t/show-address-qr)
+                :on-press            #(rf/dispatch [:open-modal :screen/wallet.share-address
+                                                    {:status :share}])}
+               {:icon                :i/share
+                :accessibility-label :share-address
+                :label               (i18n/label :t/share-address)
+                :on-press            (fn []
+                                       (rf/dispatch [:hide-bottom-sheet])
+                                       (js/setTimeout
+                                        #(rf/dispatch [:wallet/share-account
+                                                       {:title share-title :content address}])
+                                        600))}])]]))
 
 (defn view
   []
