@@ -16,7 +16,6 @@
     [react-native.platform :as platform]
     [react-native.shake :as react-native-shake]
     [reagent.core]
-    [reagent.impl.batching :as batching]
     [status-im.common.log :as logging]
     [taoensso.timbre :as log]
     [status-im.common.universal-links :as universal-links]
@@ -35,7 +34,20 @@
 
 ;;;; re-frame RN setup
 (set! interop/next-tick js/setTimeout)
-(set! batching/fake-raf #(js/setTimeout % 0))
+
+;; Note: In the past we've configured reagent to run its batch rendering
+;; faster by overriding the next-tick function. This technique could be useful
+;; if we want to adjust the batch speed for different frame-rates since by
+;; default reagent tunes its batch rendering for 60FPS.
+;;
+;; For example, this code would have batches rendering as fast as possible
+;; (set! reagent.impl.batching/next-tick js/setImmediate)
+;;
+;; While this example would approximate 120FPS
+;; (set! reagent.impl.batching/next-tick #(js/setTimeout % 8))
+;;
+;; And under the hood this is what reagent will use for approximately 60FPS:
+;; (set! reagent.impl.batching/next-tick #(js/setTimeout % 16))
 
 (def adjust-resize 16)
 
