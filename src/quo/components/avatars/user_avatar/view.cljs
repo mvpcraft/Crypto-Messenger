@@ -27,17 +27,11 @@
       (utils.string/get-initials full-name amount-initials)]]))
 
 (defn user-avatar-internal
-  "Render user avatar with `profile-picture`
-
-   WARNING:
-   When calling the `profile-picture-fn` and passing the `:ring?` key, be aware that the `profile-picture-fn`
-   may have an `:override-ring?` value. If it does then the `:ring?` value will not be used.
-   For reference, refer to the `utils.image-server` namespace for these `profile-picture-fn` are generated."
-  [{:keys [full-name size profile-picture static? status-indicator? online? ring?]
+  "Render user avatar with `profile-picture`."
+  [{:keys [full-name size profile-picture static? status-indicator? online?]
     :or   {size              :big
            status-indicator? true
-           online?           true
-           ring?             true}
+           online?           true}
     :as   props}]
   (let [theme           (quo.context/use-theme)
         picture-config  (:config profile-picture)
@@ -80,9 +74,7 @@
                        :indicator-color          indicator-color
                        :theme                    theme
                        :color                    (:color style/initials-avatar-text)
-                       :size                     (:width outer-styles)
-                       :ring?                    ring?
-                       :ring-width               (:ring-width sizes)})}
+                       :size                     (:width outer-styles)})}
                (:uri profile-picture)
                profile-picture
 
