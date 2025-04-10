@@ -194,3 +194,5 @@
 
 ;;keycard
 (reg-root-key-sub :keycard :keycard)
+
+(reg-root-key-sub :log-level/pre-login-log-level :log-level/pre-login-log-level)

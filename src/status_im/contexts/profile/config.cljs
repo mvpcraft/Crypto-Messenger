@@ -50,16 +50,16 @@
 
 (defn create
   []
-  (let [log-enabled? (boolean (not-empty config/log-level))]
+  (let [log-enabled? (boolean (not-empty (config/log-level)))]
     (merge
      (login)
      (common-config)
      {:deviceName          (native-module/get-installation-name)
       :rootDataDir         (native-module/backup-disabled-data-dir)
       :rootKeystoreDir     (native-module/keystore-dir)
-      :logLevel            (when log-enabled? config/log-level)
+      :logLevel            (when log-enabled? (config/log-level))
       :logEnabled          log-enabled?
-      :logFilePath         (native-module/log-file-directory)
+      :logFilePath         (native-module/log-file-directory config/use-public-log-dir?)
       :wakuV2Fleet         config/fleet
       :previewPrivacy      config/blank-preview?
       :testNetworksEnabled config/test-networks-enabled?})))

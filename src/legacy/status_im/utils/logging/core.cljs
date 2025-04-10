@@ -5,19 +5,20 @@
     [legacy.status-im.ui.components.react :as react]
     [legacy.status-im.utils.build :as build]
     [legacy.status-im.utils.deprecated-types :as types]
+    [legacy.status-im.utils.logging.view :as view]
     [native-module.core :as native-module]
     [re-frame.core :as re-frame]
+    [react-native.mmkv :as mmkv]
     [react-native.platform :as platform]
     [status-im.common.json-rpc.events :as json-rpc]
     [status-im.common.log :as common-log]
     [status-im.config :as config]
+    [status-im.constants :as constants]
     [status-im.navigation.events :as navigation]
     [taoensso.timbre :as log]
     [utils.datetime :as datetime]
     [utils.i18n :as i18n]
     [utils.re-frame :as rf]))
-
-(def report-email "error-reports@status.im")
 
 (re-frame/reg-fx
  :logs/archive-logs
@@ -25,6 +26,7 @@
    (native-module/send-logs
     db-json
     (string/join "\n" (common-log/get-logs-queue))
+    config/use-public-log-dir?
     #(re-frame/dispatch [callback-handler %]))))
 
 (rf/defn store-web3-client-version
@@ -97,10 +99,9 @@
   (rf/merge
    cofx
    {:db (dissoc db :bug-report/details)}
-   (dialog-closed)
    (send-email
     (cond-> {:subject    "Error report"
-             :recipients [report-email]
+             :recipients [constants/report-email]
              :body       (email-body db)}
 
       (not (nil? archive-uri))
@@ -116,39 +117,49 @@
   [{:profile/keys [profile]}]
   (let [log-level (if profile ;; already login
                     (get profile :log-level)
-                    config/log-level)]
+                    (config/log-level))]
     (not (string/blank? log-level))))
+
+(rf/defn trigger-archive-logs
+  {:events [:logging/trigger-archive-logs]}
+  [_ db-json callback-handler]
+  {:logs/archive-logs [db-json callback-handler]})
 
 (rf/defn send-logs
   {:events [:logging.ui/send-logs-pressed]}
-  [{:keys [db] :as cofx} transport]
-  (if (logs-enabled? db)
-    ;; TODO: Add message explaining db export
-    (let [db-json (types/clj->json (select-keys db
-                                                [:app-state
-                                                 :current-chat-id
-                                                 :network
-                                                 :network/status
-                                                 :peers-summary
-                                                 :sync-state
-                                                 :view-id
-                                                 :chat/cooldown-enabled?
-                                                 :chat/cooldowns
-                                                 :chat/last-outgoing-message-sent-at
-                                                 :chat/spam-messages-frequency
-                                                 :dimensions/window]))]
-      {:logs/archive-logs [db-json
-                           (if (= transport :email)
-                             ::send-email
-                             ::share-logs-file)]})
-    (send-email-event cofx nil)))
+  [{:keys [db]} transport hide-bottom-sheet?]
+  (let [log-enabled? (logs-enabled? db)
+        db-json      (when log-enabled?
+                       (types/clj->json
+                        (select-keys db
+                                     [:app-state
+                                      :current-chat-id
+                                      :network
+                                      :network/status
+                                      :peers-summary
+                                      :sync-state
+                                      :view-id
+                                      :chat/cooldown-enabled?
+                                      :chat/cooldowns
+                                      :chat/last-outgoing-message-sent-at
+                                      :chat/spam-messages-frequency
+                                      :dimensions/window])))]
+    {:fx [(when hide-bottom-sheet? [:dispatch [:hide-bottom-sheet]])
+          (if log-enabled?
+            [:dispatch-later
+             {:ms       1000 ;; wait for hide-bottom-sheet to be processed, otherwise we won't see
+                             ;; the share dialog on iOS
+              :dispatch [:logging/trigger-archive-logs
+                         db-json
+                         (if (= transport :email) ::send-email ::share-logs-file)]}]
+            [:dispatch [::send-email nil]])]}))
 
 (rf/defn send-logs-on-error
   {:events [:logging/send-logs-on-error]}
   [{:keys [db]} error-message]
   (rf/merge
    {:db (assoc-in db [:bug-report/details :description] error-message)}
-   (send-logs :email)))
+   (send-logs :email false)))
 
 (rf/defn show-client-error
   {:events [:show-client-error]}
@@ -161,19 +172,11 @@
   [{:keys [db]}]
   (when-not (:logging/dialog-shown? db)
     {:db (assoc db :logging/dialog-shown? true)
-     :effects.utils/show-confirmation
-     {:title (i18n/label :t/send-logs)
-      :content (i18n/label :t/send-logs-to
-                           {:email report-email})
-      :confirm-button-text (i18n/label :t/send-logs)
-      :extra-options
-      [{:text    (i18n/label :t/share-logs)
-        :onPress #(re-frame/dispatch
-                   [:logging.ui/send-logs-pressed :sharing])
-        :style   "default"}]
-      :on-accept #(do (re-frame/dispatch [:open-modal :screen/bug-report])
-                      (re-frame/dispatch [:logging/dialog-left]))
-      :on-cancel #(re-frame/dispatch [:logging/dialog-left])}}))
+     :fx [[:dispatch [:show-bottom-sheet {:content view/logs-management-drawer}]]
+          [:dispatch-later
+           {:ms       2000 ;; process :shake-event after 2 seconds, use :logging/dialog-shown? to
+                           ;; avoid handling :shake-event multiple times in a short time
+            :dispatch [:logging/dialog-left]}]]}))
 
 (re-frame/reg-fx
  :email/send
@@ -196,7 +199,6 @@
   [cofx archive-uri]
   (rf/merge
    cofx
-   (dialog-closed)
    (share-archive
     {:title "Archived logs"
      :url   archive-uri})))
@@ -225,7 +227,7 @@
     (rf/merge
      cofx
      (navigation/hide-bottom-sheet)
-     (send-logs :email))))
+     (send-logs :email false))))
 
 (re-frame/reg-fx
  ::open-url
@@ -254,3 +256,30 @@
    {:db (dissoc db :bug-report/details)}
    (navigation/hide-bottom-sheet)
    (submit-issue)))
+
+(rf/defn change-pre-login-log-level
+  {:events [:log-level.ui/change-pre-login-log-level]}
+  [{:keys [db]} log-level]
+  (let [old-log-level (get-in db [:log-level/pre-login-log-level])]
+    (when (not= old-log-level log-level)
+      (let [need-set-pre-login-log-enabled? (or (empty? old-log-level) (empty? log-level))
+            pre-login-log-enabled?          (boolean (seq log-level))]
+        {:fx [[:log-level/set-pre-login-log-level log-level]
+              (when need-set-pre-login-log-enabled?
+                [:log-level/set-pre-login-log-enabled pre-login-log-enabled?])
+              ;; update log level in taoensso.timbre
+              [:logs/set-level log-level]
+              [:dispatch [:hide-bottom-sheet]]]
+         :db (assoc db :log-level/pre-login-log-level log-level)}))))
+
+(rf/reg-fx
+ :log-level/set-pre-login-log-level
+ (fn [log-level]
+   (mmkv/set constants/pre-login-log-level-key log-level)
+   (when (seq log-level)
+     (native-module/set-pre-login-log-level log-level))))
+
+(rf/reg-fx
+ :log-level/set-pre-login-log-enabled
+ (fn [enabled?]
+   (native-module/set-pre-login-log-enabled enabled?)))

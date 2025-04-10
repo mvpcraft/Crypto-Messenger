@@ -2,6 +2,7 @@
   (:require
     [legacy.status-im.fleet.core :as fleet]
     [react-native.core :as rn]
+    [status-im.config :as config]
     [status-im.contexts.shell.activity-center.events :as activity-center]
     [status-im.contexts.wallet.db :as wallet]))
 
@@ -41,4 +42,5 @@
    :stickers/packs-pending             #{}
    :settings/change-password           {}
    :keycard                            {}
-   :theme                              :dark})
+   :theme                              :dark
+   :log-level/pre-login-log-level      (config/log-level)})

@@ -376,7 +376,26 @@
 (def worklet-factory
   #js {:applyAnimationsToStyle (fn [])})
 
-;; Update i18n_resources.cljs
+(def mmkv-storage-atom (atom {}))
+
+(defn create-mmkv-mock
+  []
+  (let [getter (fn [k] (get @mmkv-storage-atom k))]
+    (clj->js
+     {:set        (fn [k v] (swap! mmkv-storage-atom assoc k v) true)
+      :getString  getter
+      :getBoolean getter
+      :getNumber  getter
+      :contains   (fn [k] (contains? @mmkv-storage-atom k))
+      :delete     (fn [k] (swap! mmkv-storage-atom dissoc k) true)
+      :clearAll   (fn [] (reset! mmkv-storage-atom {}) true)
+      :getAllKeys (fn [] (clj->js (keys @mmkv-storage-atom)))})))
+
+(def react-native-mmkv
+  (clj->js
+   {:MMKV       (fn [_] (create-mmkv-mock))
+    :createMMKV (fn [_] (create-mmkv-mock))}))
+
 (defn mock
   [module]
   (case module
@@ -385,6 +404,7 @@
     "react-native-gesture-handler"                     react-native-gesture-handler
     "react-native-static-safe-area-insets"             react-native-static-safe-area-insets
     "react-native-config"                              config
+    "react-native-mmkv"                                react-native-mmkv
     "react-native-iphone-x-helper"                     (clj->js {:getStatusBarHeight (fn [])
                                                                  :getBottomSpace     (fn [])})
     "react-native-screens"                             (clj->js {})
