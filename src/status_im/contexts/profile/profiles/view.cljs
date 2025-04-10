@@ -2,6 +2,7 @@
   (:require
     [clojure.string :as string]
     [native-module.core :as native-module]
+    [quo.context :as quo.context]
     [quo.core :as quo]
     [react-native.core :as rn]
     [react-native.reanimated :as reanimated]
@@ -139,9 +140,9 @@
                                :color           customization-color
                                :profile-picture profile-picture})
       :on-card-press        (fn []
-                              (rf/dispatch-sync [:profile/profile-selected key-uid])
                               (rf/dispatch
-                               [:profile.login/login-with-biometric-if-available key-uid])
+                               [:profile.login/select-profile-and-login-with-biometric-if-available
+                                key-uid])
                               (set-hide-profiles))}]))
 
 (defn- profiles-section
@@ -278,7 +279,8 @@
 
 (defn view
   []
-  (let [[show-profiles? set-show-profiles] (rn/use-state true)
+  (let [{:keys [default-screen-profiles?]} (quo.context/use-screen-params)
+        [show-profiles? set-show-profiles] (rn/use-state default-screen-profiles?)
         show-profiles                      (rn/use-callback #(set-show-profiles true))
         hide-profiles                      (rn/use-callback #(set-show-profiles false))]
     (rn/use-mount #(rf/dispatch [:centralized-metrics/check-user-confirmation]))

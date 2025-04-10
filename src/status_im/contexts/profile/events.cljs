@@ -77,7 +77,8 @@
  :profile/get-profiles-overview-success
  (fn [{:keys [db]}
       [{accounts                               :accounts
-        {:keys [userConfirmed enabled userID]} :centralizedMetricsInfo}]]
+        {:keys [userConfirmed enabled userID]} :centralizedMetricsInfo}
+       {:keys [logout-phase?]}]]
    (let [profiles          (reduce-profiles accounts)
          profiles-key-uids (keys profiles)
          new-db            (cond-> db
@@ -89,9 +90,15 @@
                              (seq profiles)
                              (assoc :profile/profiles-overview profiles))]
      {:db new-db
-      :fx [[:dispatch [:profile/get-profiles-auth-method profiles-key-uids]]
+      :fx [(when-not logout-phase?
+             [:dispatch
+              [:profile.login/select-profile-and-login-with-biometric-if-available
+               (-> profiles profile.data-store/recently-opened-profile :key-uid)]])
+           [:dispatch [:profile/get-profiles-auth-method profiles-key-uids]]
            (if (profile.data-store/accepted-terms? accounts)
-             [:dispatch [:update-theme-and-init-root :screen/profile.profiles]]
+             [:dispatch
+              [:update-theme-and-init-root :screen/profile.profiles
+               {:default-screen-profiles? logout-phase?}]]
              [:dispatch [:update-theme-and-init-root :screen/onboarding.intro]])
            ;; dispatch-later makes sure that the logout button subscribed is always disabled
            [:dispatch-later
