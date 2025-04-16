@@ -8,6 +8,7 @@ from selenium.common import NoSuchElementException
 from tests import common_password
 from views.base_element import Button, EditBox, Text, BaseElement
 from views.base_view import BaseView
+from views.chat_view import ChatView
 from views.home_view import HomeView
 from views.sign_in_view import SignInView
 
@@ -137,6 +138,8 @@ class WalletView(BaseView):
         self.total_balance_text = Text(
             self.driver, xpath="//*[@content-desc='network-dropdown']/preceding-sibling::android.widget.TextView")
         self.network_drop_down = Button(self.driver, accessibility_id='network-dropdown')
+        self.connected_dapps_button = Button(
+            self.driver, xpath="//*[@content-desc='network-dropdown']/../following-sibling::*[@content-desc='icon']")
         self.collectibles_tab = Button(self.driver, accessibility_id='collectibles-tab')
         self.add_account_button = Button(self.driver, accessibility_id='add-account')
 
@@ -230,6 +233,13 @@ class WalletView(BaseView):
         self.expanded_collectible_image = BaseElement(
             self.driver, xpath="//*[@content-desc='expanded-collectible']//android.widget.ImageView")
         self.send_from_collectible_info_button = Button(self.driver, accessibility_id="icon, Send")
+
+        # dApp adding
+        self.add_dapp_button = Button(self.driver, accessibility_id='connected-dapps-add')
+        self.wallet_connect_button = Button(self.driver, accessibility_id='wc-connect')
+        self.wallet_decline_button = Button(self.driver, accessibility_id='wc-deny-connection')
+        self.select_account_to_connect_dapp_button = Button(self.driver, accessibility_id='icon-right')
+        self.close_connected_dapps_button = Button(self.driver, accessibility_id='connected-dapps-close')
 
     def set_network_in_wallet(self, network_name: str):
         class NetworksCheckboxElement(Button):
@@ -529,3 +539,21 @@ class WalletView(BaseView):
     def get_receive_swap_amount(self, decimals=18):
         self.just_fyi("Getting swap Receive amount for on review page")
         return self.round_amount_float(self.swap_receive_amount_summary_text.text.split()[0], decimals)
+
+    def get_connected_dapp_element_by_name(self, dapp_name: str):
+        class ConnectedDAppElement(BaseElement):
+            def __init__(self, driver, dapp_name):
+                self.locator = "//*[contains(@content-desc,'dapp-')][*[@text='%s']]" % dapp_name
+                super().__init__(driver, xpath=self.locator)
+                self.url_text = Text(self.driver, xpath=self.locator + "//*[starts-with(@text,'http')]")
+                self.disconnect_button = Button(self.driver, xpath=self.locator + "//*[@content-desc='icon']")
+
+            def disconnect(self):
+                self.disconnect_button.click()
+                ChatView(self.driver).confirm_block_contact_button.click()
+
+        return ConnectedDAppElement(self.driver, dapp_name)
+
+    def select_account_to_connect_dapp(self, account_name: str):
+        self.select_account_to_connect_dapp_button.click()
+        Button(self.driver, xpath="//*[@content-desc='container']/*[@text='%s']" % account_name).click()
