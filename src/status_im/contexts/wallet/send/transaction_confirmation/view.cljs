@@ -41,8 +41,7 @@
          (fn [idx path]
            (let [from-network  (:from path)
                  chain-id      (:chain-id from-network)
-                 network       (rf/sub [:wallet/network-details-by-chain-id
-                                        chain-id])
+                 network       (rf/sub [:wallet/network-by-id chain-id])
                  network-name  (:network-name network)
                  network-color (if (= network-name :mainnet) :ethereum network-name)]
              (with-meta
@@ -124,7 +123,7 @@
 
 (defn- user-summary
   [{:keys [account-props theme label accessibility-label summary-type recipient bridge-tx? account-to?]}]
-  (let [network-values    (rf/sub [:wallet/network-values account-to?])
+  (let [network-values    (rf/sub [:wallet/send-network-values account-to?])
         summary-info-type (case (:recipient-type recipient)
                             :saved-address :saved-account
                             :account       :status-account
@@ -261,8 +260,7 @@
         account                   (rf/sub [:wallet/current-viewing-account])
         account-color             (:color account)
         bridge-to-network         (when bridge-to-chain-id
-                                    (rf/sub [:wallet/network-details-by-chain-id
-                                             bridge-to-chain-id]))
+                                    (rf/sub [:wallet/network-by-id bridge-to-chain-id]))
         loading-suggested-routes? (rf/sub
                                    [:wallet/wallet-send-loading-suggested-routes?])
         from-account-props        {:customization-color account-color

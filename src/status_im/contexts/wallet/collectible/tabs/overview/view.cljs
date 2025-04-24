@@ -35,7 +35,7 @@
 
 (defn- info
   [{:keys [chain-id account]}]
-  (let [{:keys [network-name full-name]} (rf/sub [:wallet/network-details-by-chain-id chain-id])]
+  (let [{:keys [network-name full-name]} (rf/sub [:wallet/network-by-id chain-id])]
     [rn/view {:style style/info-container}
      [rn/view {:style style/account}
       [quo/data-item

@@ -40,3 +40,20 @@
 (def new-chain-indicator
   {:position :absolute
    :right    0})
+
+(def single-network-container
+  {:flex-direction  :row
+   :align-items     :center
+   :justify-content :center
+   :margin-right    4})
+
+(def filtered-container
+  {:flex-direction  :row
+   :align-items     :center
+   :justify-content :center})
+
+(def single-network-image
+  {:width         20
+   :height        20
+   :border-radius 10
+   :margin-right  4})

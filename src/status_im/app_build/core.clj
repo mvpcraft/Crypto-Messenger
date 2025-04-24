@@ -1,4 +1,4 @@
-(ns legacy.status-im.utils.build
+(ns status-im.app-build.core
   (:require
     [clojure.java.io :as io]
     [clojure.java.shell :as shell]

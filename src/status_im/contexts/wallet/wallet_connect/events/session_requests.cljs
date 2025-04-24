@@ -85,35 +85,51 @@
  (fn [{:keys [db]} [prepared-tx chain-id]]
    (let [{:keys [tx-args tx-hash]} prepared-tx
          tx                        (bean/->clj tx-args)
-         address                   (-> tx :from string/lower-case)
          display-data              (transactions/beautify-transaction tx)]
+     (log/info "WC transaction prepared")
      {:db (update-in db
                      [:wallet-connect/current-request]
                      assoc
-                     :address      address
                      :raw-data     prepared-tx
                      :transaction  tx
                      :chain-id     chain-id
                      :display-data display-data)
       :fx [[:dispatch [:wallet-connect/store-prepared-hash tx-hash]]]})))
 
-(rf/reg-event-fx
- :wallet-connect/process-eth-send-transaction
- (fn [{:keys [db]} [{:keys [on-success]}]]
+(rf/reg-event-fx :wallet-connect/prepare-transaction
+ (fn [{:keys [db]} [on-success]]
    (let [event    (data-store/get-db-current-request-event db)
          tx       (-> event data-store/get-request-params first)
          chain-id (-> event
                       (get-in [:params :chainId])
                       networks.utils/eip155->chain-id)]
+     (log/info "Preparing WC transaction")
+     {:fx [[:effects.wallet-connect/prepare-transaction
+            {:tx         tx
+             :chain-id   chain-id
+             :on-success (fn [data]
+                           (rf/dispatch [:wallet-connect/prepare-transaction-success data
+                                         chain-id])
+                           (when on-success
+                             (rf/call-continuation on-success)))
+             :on-error   #(rf/dispatch [:wallet-connect/on-processing-error %])}]]})))
+
+(rf/reg-event-fx
+ :wallet-connect/process-eth-send-transaction
+ (fn [{:keys [db]} [{:keys [on-success]}]]
+   (let [event             (data-store/get-db-current-request-event db)
+         chain-id          (data-store/get-request-chain-id event)
+         tx                (-> event data-store/get-request-params first)
+         address           (-> tx :from string/lower-case)
+         chain-active?     (networks.db/network-active? db chain-id)
+         prepare-tx-effect [:wallet-connect/prepare-transaction on-success]]
      (when tx
-       {:fx [[:effects.wallet-connect/prepare-transaction
-              {:tx         tx
-               :chain-id   chain-id
-               :on-success (fn [data]
-                             (rf/dispatch [:wallet-connect/prepare-transaction-success data chain-id])
-                             (when on-success
-                               (rf/call-continuation on-success)))
-               :on-error   #(rf/dispatch [:wallet-connect/on-processing-error %])}]]}))))
+       {:db (assoc-in db [:wallet-connect/current-request :address] address)
+        :fx [(if chain-active?
+               [:dispatch prepare-tx-effect]
+               [:dispatch
+                [:wallet-connect/show-activate-request-network-sheet
+                 {:on-success #(rf/dispatch prepare-tx-effect)}]])]}))))
 
 (rf/reg-event-fx
  :wallet-connect/process-sign-typed

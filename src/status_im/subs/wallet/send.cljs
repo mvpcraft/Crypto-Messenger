@@ -4,6 +4,8 @@
     [status-im.constants :as constants]
     [status-im.contexts.wallet.common.activity-tab.constants :as activity-tab-constants]
     [status-im.contexts.wallet.common.utils :as common-utils]
+    [status-im.contexts.wallet.common.utils.networks :as network-utils]
+    [status-im.contexts.wallet.networks.core :as networks]
     [status-im.contexts.wallet.send.utils :as send-utils]
     [utils.money :as money]
     [utils.number :as number]))
@@ -84,7 +86,7 @@
 (rf/reg-sub
  :wallet/bridge-from-networks
  :<- [:wallet/wallet-send]
- :<- [:wallet/network-details]
+ :<- [:wallet/active-networks]
  (fn [[{:keys [bridge-to-chain-id]} networks]]
    (set (filter (fn [network]
                   (not= (:chain-id network) bridge-to-chain-id))
@@ -93,7 +95,7 @@
 (rf/reg-sub
  :wallet/bridge-from-chain-ids
  :<- [:wallet/wallet-send]
- :<- [:wallet/network-details]
+ :<- [:wallet/active-networks]
  (fn [[{:keys [bridge-to-chain-id]} networks]]
    (keep (fn [network]
            (when (not= (:chain-id network) bridge-to-chain-id)
@@ -160,15 +162,9 @@
 (rf/reg-sub
  :wallet/bridge-to-network-details
  :<- [:wallet/wallet-send]
- :<- [:wallet/network-details]
- (fn [[{:keys [bridge-to-chain-id]} networks]]
-   (when bridge-to-chain-id
-
-     (some (fn [network]
-             (when
-               (= (:chain-id network) bridge-to-chain-id)
-               network))
-           networks))))
+ :<- [:wallet/networks-by-id]
+ (fn [[{:keys [bridge-to-chain-id]} networks-by-id]]
+   (get networks-by-id bridge-to-chain-id)))
 
 (rf/reg-sub
  :wallet/send-token-grouped-networks
@@ -226,3 +222,41 @@
  :<- [:wallet/send-route]
  (fn [[loading? route]]
    (and (empty? route) (not loading?))))
+
+(rf/reg-sub :wallet/send-selected-network
+ :<- [:wallet/networks-by-id]
+ :<- [:wallet/wallet-send]
+ (fn [[networks {:keys [to-values-by-chain]}]]
+   (->> to-values-by-chain
+        keys
+        first
+        (get networks))))
+
+(rf/reg-sub
+ :wallet/send-network-values
+ :<- [:wallet/networks-by-id]
+ :<- [:wallet/wallet-send]
+ (fn [[networks {:keys [from-values-by-chain to-values-by-chain token-display-name token] :as send-data}]
+      [_ to-values?]]
+   (let [network-values (if to-values? to-values-by-chain from-values-by-chain)
+         token-symbol   (or token-display-name
+                            (-> send-data :token :symbol))
+         token-decimals (:decimals token)]
+     (reduce-kv
+      (fn [acc chain-id amount]
+        (let [network-name (-> networks (get chain-id) :network-name)
+              amount-fixed (number/to-fixed (money/->bignumber amount) token-decimals)]
+          (merge acc (network-utils/network-summary network-name token-symbol amount-fixed))))
+      {}
+      network-values))))
+
+(rf/reg-sub
+ :wallet/bridge-to-networks
+ :<- [:wallet/active-networks]
+ :<- [:wallet/send-network]
+ (fn [[networks send-network]]
+   (let [available-networks-for-bridge (remove #(= (:chain-id send-network)
+                                                   (:chain-id %))
+                                               networks)]
+     {:layer-1 (networks/get-networks-for-layer available-networks-for-bridge 1)
+      :layer-2 (networks/get-networks-for-layer available-networks-for-bridge 2)})))
