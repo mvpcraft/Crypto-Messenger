@@ -186,10 +186,8 @@ class TestOneToOneChatMultipleSharedDevicesNewUi(MultipleSharedDeviceTestCase):
 
         self.errors.verify_no_errors()
 
-    # @marks.smoke # ToDo: return to the smoke suite when https://github.com/status-im/status-mobile/issues/22497 is fixed
+    @marks.smoke
     @marks.testrail_id(702731)
-    @marks.xfail(
-        reason="Can not unpin messages from pinned messages menu - https://github.com/status-im/status-mobile/issues/22497")
     def test_1_1_chat_pin_messages(self):
         self.home_1.just_fyi("Check that Device1 can pin own message in 1-1 chat")
         self.chat_2.navigate_to_chats_view()
@@ -243,10 +241,9 @@ class TestOneToOneChatMultipleSharedDevicesNewUi(MultipleSharedDeviceTestCase):
                 or self.chat_1.pinned_messages_list.message_element_by_text(self.message_4).is_element_displayed():
             self.errors.append(self.chat_1, "Can pin more than 3 messages in chat")
         else:
-            unpin_element = self.chat_1.element_by_translation_id('unpin-from-chat')
             self.chat_1.pinned_messages_list.message_element_by_text(self.message_2).long_press_without_release()
             self.home_1.just_fyi("Unpin one message so that another could be pinned")
-            unpin_element.click_until_absense_of_element(desired_element=unpin_element)
+            self.chat_1.element_by_translation_id('unpin-from-chat').click()
             self.chat_1.pin_message(self.message_4, 'pin-to-chat')
             for chat in self.chat_1, self.chat_2:
                 if not chat.chat_element_by_text(self.message_4).pinned_by_label.is_element_displayed(30):
@@ -263,9 +260,8 @@ class TestOneToOneChatMultipleSharedDevicesNewUi(MultipleSharedDeviceTestCase):
         self.chat_1.tap_by_coordinates(500, 100)
         self.chat_1.view_pinned_messages_button.click_until_presence_of_element(self.chat_1.pinned_messages_list)
         pinned_message = self.chat_1.pinned_messages_list.message_element_by_text(self.message_4)
-        unpin_element = self.chat_1.element_by_translation_id("unpin-from-chat")
         pinned_message.long_press_without_release()
-        unpin_element.click_until_absense_of_element(unpin_element)
+        self.chat_1.element_by_translation_id("unpin-from-chat").click()
         try:
             self.chat_2.chat_element_by_text(self.message_4).pinned_by_label.wait_for_invisibility_of_element(60)
         except TimeoutException:

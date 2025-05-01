@@ -357,8 +357,6 @@ class TestGroupChatMultipleDeviceMergedNewUI(MultipleSharedDeviceTestCase):
         self.errors.verify_no_errors()
 
     @marks.testrail_id(702732)
-    @marks.xfail(
-        reason="Can not unpin messages from pinned messages menu - https://github.com/status-im/status-mobile/issues/22497")
     def test_group_chat_pin_messages(self):
         [self.homes[i].navigate_back_to_home_view() for i in range(3)]
         [self.homes[i].get_chat(self.chat_name).click() for i in range(3)]
@@ -410,8 +408,8 @@ class TestGroupChatMultipleDeviceMergedNewUI(MultipleSharedDeviceTestCase):
         self.chats[0].view_pinned_messages_button.click_until_presence_of_element(self.chats[0].pinned_messages_list)
         if self.chats[0].pinned_messages_list.message_element_by_text(self.message_4).is_element_displayed():
             self.errors.append(self.chats[0], "Can pin more than 3 messages")
-        self.chats[0].tap_by_coordinates(500, 100)
-        self.chats[0].pin_message(self.message_2, action='unpin-from-chat')
+        self.chats[0].pinned_messages_list.message_element_by_text(self.message_2).long_press_without_release()
+        self.chats[0].element_by_translation_id('unpin-from-chat').click()
         self.chats[0].pin_message(self.message_4, 'pin-to-chat')
         for chat in self.chats[0], self.chats[1]:
             if not chat.chat_element_by_text(self.message_4).pinned_by_label.is_element_displayed(30):

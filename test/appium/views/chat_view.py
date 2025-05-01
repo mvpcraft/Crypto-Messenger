@@ -325,7 +325,8 @@ class CommunityView(HomeView):
         self.close_community_view_button = Button(self.driver, accessibility_id="back-button")
         self.community_title = Text(self.driver, accessibility_id="community-title")
         self.community_logo = BaseElement(
-            self.driver, xpath="//*[@content-desc='community-title']/preceding-sibling::*/android.widget.ImageView")
+            self.driver,
+            xpath="//*[*[*[@content-desc='community-title']]]/following-sibling::*/android.widget.ImageView")
         self.community_description_text = Text(self.driver, accessibility_id="community-description-text")
         self.community_status_joined = Text(self.driver, accessibility_id="status-tag-positive")
         self.community_status_pending = Text(self.driver, accessibility_id="status-tag-pending")
