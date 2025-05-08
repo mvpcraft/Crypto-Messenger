@@ -2,6 +2,7 @@ import datetime
 import time
 from typing import Literal
 
+
 import pytest
 from selenium.common import NoSuchElementException
 
@@ -93,6 +94,10 @@ class ActivityElement(BaseElement):
     @property
     def timestamp(self):
         return Text(self.driver, prefix=self.locator, xpath="//*[@content-desc='transaction-timestamp']").text
+
+    @property
+    def options(self):
+        return Button(self.driver, prefix=self.locator, xpath="//*[@content-desc='transaction-timestamp']/following::*[@content-desc='icon'][1]")
 
     @property
     def amount(self):
@@ -190,6 +195,14 @@ class WalletView(BaseView):
         self.to_data_container = ConfirmationViewInfoContainer(self.driver, label_name='To')
         self.on_data_container = ConfirmationViewInfoContainer(self.driver, label_name='On')
 
+        # Advanced tx settings
+        self.advanced_tx_button = Button(self.driver, accessibility_id='advanced-button')
+        self.custom_tx_params_button = Button(self.driver, translation_id='custom')
+        self.custom_max_base_fee_button = Button(self.driver, translation_id='max-base-fee')
+        self.custom_max_prio_fee_button = Button(self.driver, translation_id='priority-fee')
+        self.custom_nonce_button = Button(self.driver, translation_id='nonce')
+        self.custom_max_gas_amount_button = Button(self.driver, translation_id='max-gas-amount')
+
         # Swap flow
         self.approve_swap_button = Button(self.driver, accessibility_id='Approve')
         self.spending_cap_approval_info_container = BaseElement(
@@ -233,6 +246,10 @@ class WalletView(BaseView):
         self.expanded_collectible_image = BaseElement(
             self.driver, xpath="//*[@content-desc='expanded-collectible']//android.widget.ImageView")
         self.send_from_collectible_info_button = Button(self.driver, accessibility_id="icon, Send")
+
+
+        # Tx activity
+        self.copy_tx_hash_button = Button(self.driver, accessibility_id="copy-transaction-hash")
 
         # dApp adding
         self.add_dapp_button = Button(self.driver, accessibility_id='connected-dapps-add')
@@ -309,13 +326,34 @@ class WalletView(BaseView):
         for i in amount:
             Button(self.driver, accessibility_id='keyboard-key-%s' % i).click()
 
-    def send_asset(self, address: str, asset_name: str, amount, network_name: str, account='Account 1'):
-        self.send_button.click()
+    def clear_value_and_set_with_custom_keyboard(self, value: str):
+        self.clear_amount()
+        self.set_amount(value)
+        self.button_one.click()
+        
+    def clear_nonce_field(self):
+        Button(self.driver, xpath='//com.horcrux.svg.SvgView[@content-desc="icon"]').click()
+
+    def clear_amount(self):
+        """
+        Tap on the clear button until the amount input field is empty.
+        """
+        clear_button = Button(self.driver, accessibility_id="icon-label")
+        edit_box = EditBox(self.driver, xpath="//android.widget.EditText")
+        while edit_box.text != "" and edit_box.text != "0":
+            clear_button.click()
+    
+    def set_amount_and_address(self, address: str, asset_name: str, amount, network_name=""):
+        self.send_button.click_until_presence_of_element(self.address_text_input)
         self.address_text_input.send_keys(address)
         self.continue_button.click()
         self.select_asset(asset_name)
-        self.select_network(network_name)
+        if network_name:
+            self.select_network(network_name)
         self.set_amount(str(amount))
+
+    def send_asset(self, address: str, asset_name: str, amount, network_name: str, account='Account 1'):
+        self.set_amount_and_address(address, asset_name, amount, network_name)
         self.confirm_transaction()
 
     def send_asset_from_drawer(self, address: str, asset_name: str, amount, network_name: str):
@@ -344,6 +382,11 @@ class WalletView(BaseView):
                 'est_time': est_time,
                 'est_slippage': slippage,
                 'max_fees': fees}
+
+    def copy_tx_hash(self):
+        self.get_activity_element().options.click_until_presence_of_element(self.copy_tx_hash_button)
+        self.copy_tx_hash_button.click()
+        return self.driver.get_clipboard_text()
 
     def add_regular_account(self, account_name: str):
         if not self.add_account_button.is_element_displayed():
@@ -479,7 +522,8 @@ class WalletView(BaseView):
                                            send_to_account='',
                                            swap_asset_to='SNT',
                                            swap_amount_to='0.000000000000000000',
-                                           network='Status Network'):
+                                           network='Status Network',
+                                           navigate_to_main_screen=True):
         errors = list()
         current_time = datetime.datetime.strptime(device_time, "%Y-%m-%dT%H:%M:%S%z")
         expected_time = "Today %s" % current_time.strftime('%-I:%M %p')
@@ -528,7 +572,8 @@ class WalletView(BaseView):
         except NoSuchElementException:
             errors.append("Can't find the last transaction")
         finally:
-            self.close_account_button.click_until_presence_of_element(self.show_qr_code_button)
+            if navigate_to_main_screen:
+                self.close_account_button.click_until_presence_of_element(self.show_qr_code_button)
         return errors
 
     def get_balance(self, asset='Ether', fiat=False):
@@ -539,6 +584,10 @@ class WalletView(BaseView):
     def get_receive_swap_amount(self, decimals=18):
         self.just_fyi("Getting swap Receive amount for on review page")
         return self.round_amount_float(self.swap_receive_amount_summary_text.text.split()[0], decimals)
+    
+    def get_custom_tx_element(self, text):
+        return Text(self.driver, xpath="//*[@content-desc[contains(., '%s')]]" % text)
+
 
     def get_connected_dapp_element_by_name(self, dapp_name: str):
         class ConnectedDAppElement(BaseElement):
@@ -557,3 +606,5 @@ class WalletView(BaseView):
     def select_account_to_connect_dapp(self, account_name: str):
         self.select_account_to_connect_dapp_button.click()
         Button(self.driver, xpath="//*[@content-desc='container']/*[@text='%s']" % account_name).click()
+
+      
