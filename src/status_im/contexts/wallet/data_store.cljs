@@ -117,9 +117,10 @@
 
 (defn partially-operable-accounts?
   [accounts]
-  (->> accounts
-       (some #(= :partially (:operable %)))
-       boolean))
+  (boolean
+   (some (fn [[_ {:keys [operable]}]]
+           (= :partially operable))
+         accounts)))
 
 (defn get-keypair-lowest-operability
   [{:keys [accounts]}]
