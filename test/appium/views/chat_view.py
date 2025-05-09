@@ -259,7 +259,7 @@ class ChatElementByText(Text):
         class PinnedByLabelText(Text):
             def __init__(self, driver, parent_locator: str):
                 super().__init__(driver, prefix=parent_locator,
-                                 xpath="/../..//android.view.ViewGroup[@content-desc='pinned-by']")
+                                 xpath="/..//android.view.ViewGroup[@content-desc='pinned-by']")
 
         return PinnedByLabelText(self.driver, self.locator)
 
