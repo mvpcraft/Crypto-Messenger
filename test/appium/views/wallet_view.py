@@ -257,6 +257,7 @@ class WalletView(BaseView):
         self.wallet_decline_button = Button(self.driver, accessibility_id='wc-deny-connection')
         self.select_account_to_connect_dapp_button = Button(self.driver, accessibility_id='icon-right')
         self.close_connected_dapps_button = Button(self.driver, accessibility_id='connected-dapps-close')
+        self.close_sign_message_button = Button(self.driver, accessibility_id='wallet-connect-sign-message-close')
 
     def set_network_in_wallet(self, network_name: str):
         class NetworksCheckboxElement(Button):
