@@ -311,13 +311,17 @@
 (re-frame/reg-sub
  :profile/notifications-settings
  :<- [:profile/profile]
- (fn [{:keys [notifications-enabled?
+ (fn [{:keys [notifications-blocked?
+              notifications-enabled?
               news-notifications-enabled?
               messenger-notifications-enabled?
               push-notifications-block-mentions?
               push-notifications-from-contacts-only?]}]
-   {:notifications-enabled?                    (boolean notifications-enabled?)
-    :news-notifications-enabled?               (boolean news-notifications-enabled?)
-    :messenger-notifications-enabled?          (boolean messenger-notifications-enabled?)
-    :non-contact-notifications-enabled?        (not (boolean push-notifications-from-contacts-only?))
-    :community-mentions-notifications-enabled? (not (boolean push-notifications-block-mentions?))}))
+   (let [blocked? (boolean notifications-blocked?)]
+     {:notifications-blocked?                    blocked?
+      :notifications-enabled?                    (and (boolean notifications-enabled?)
+                                                      (not blocked?))
+      :news-notifications-enabled?               (boolean news-notifications-enabled?)
+      :messenger-notifications-enabled?          (boolean messenger-notifications-enabled?)
+      :non-contact-notifications-enabled?        (not (boolean push-notifications-from-contacts-only?))
+      :community-mentions-notifications-enabled? (not (boolean push-notifications-block-mentions?))})))
