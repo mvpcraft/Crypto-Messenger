@@ -10,8 +10,8 @@
     [status-im.common.home.header-spacing.view :as common.header-spacing]
     [status-im.common.resources :as resources]
     [status-im.config :as config]
+    [status-im.constants :as constants]
     [status-im.contexts.communities.actions.community-options.view :as options]
-    [status-im.contexts.communities.actions.home-plus.view :as actions.home-plus]
     [status-im.contexts.shell.constants :as shell.constants]
     [utils.debounce :as debounce]
     [utils.i18n :as i18n]
@@ -26,9 +26,9 @@
     [quo/communities-membership-list-item
      {:customization-color customization-color
       :style               {:padding-horizontal 20}
-      :on-press            #(debounce/throttle-and-dispatch [:communities/navigate-to-community-overview
-                                                             id]
-                                                            500)
+      :on-press            #(debounce/throttle-and-dispatch
+                             [:communities/navigate-to-community-overview id]
+                             500)
       :on-long-press       #(rf/dispatch
                              [:show-bottom-sheet
                               {:content       (fn []
@@ -42,6 +42,56 @@
   [{:id :joined :label (i18n/label :t/joined) :accessibility-label :joined-tab}
    {:id :pending :label (i18n/label :t/pending) :accessibility-label :pending-tab}
    {:id :opened :label (i18n/label :t/opened) :accessibility-label :opened-tab}])
+
+(defn- community-creation-options-testing
+  []
+  [rn/view {:style {:padding-vertical 12 :row-gap 12}}
+   [quo/divider-line]
+   [rn/view
+    [quo/action-drawer
+     [[{:icon                :i/communities
+        :accessibility-label :create-closed-community
+        :label               "Create closed community (only for testing)"
+        :on-press            #(rf/dispatch [:fast-create-community/create-closed-community])}
+       {:icon                :i/communities
+        :accessibility-label :create-open-community
+        :label               "Create open community (only for testing)"
+        :on-press            #(rf/dispatch [:fast-create-community/create-open-community])}
+       {:icon                :i/communities
+        :accessibility-label :create-token-gated-community
+        :label               "Create token-gated community (only for testing)"
+        :on-press            #(rf/dispatch
+                               [:fast-create-community/create-token-gated-community])}]]]]])
+
+(defn- open-learn-more-link
+  []
+  (rf/dispatch [:hide-bottom-sheet])
+  (rf/dispatch
+   [:browser.ui/open-url constants/create-community-help-url]))
+
+(defn- hide-bottom-sheet
+  []
+  (rf/dispatch [:hide-bottom-sheet]))
+
+(defn- create-community-sheet
+  []
+  (let [customization-color (rf/sub [:profile/customization-color])]
+    [:<>
+     [quo/drawer-top {:title (i18n/label :t/want-to-create-community)}]
+     [quo/text {:style {:padding-horizontal 20 :padding-bottom 12}}
+      (i18n/label :t/communities-only-available-in-desktop)]
+     [quo/bottom-actions
+      {:actions          :two-actions
+       :button-one-label (i18n/label :t/learn-more)
+       :button-one-props {:disabled?           false
+                          :customization-color customization-color
+                          :on-press            open-learn-more-link
+                          :icon-right          :i/external}
+       :button-two-label (i18n/label :t/maybe-later)
+       :button-two-props {:type     :grey
+                          :on-press hide-bottom-sheet}}]
+     (when config/fast-create-community-enabled?
+       [community-creation-options-testing])]))
 
 (defn empty-state-content
   [theme]
@@ -66,8 +116,7 @@
   {:title-props
    {:beta?               true
     :label               (i18n/label :t/communities)
-    :handler             (when config/fast-create-community-enabled?
-                           #(rf/dispatch [:show-bottom-sheet {:content actions.home-plus/view}]))
+    :handler             #(rf/dispatch [:show-bottom-sheet {:content create-community-sheet}])
     :accessibility-label :new-communities-button}
    :card-props
    {:on-press            #(rf/dispatch [:navigate-to :screen/discover-communities])
