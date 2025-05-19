@@ -213,8 +213,7 @@ class TestCommunityOneDeviceMerged(MultipleSharedDeviceTestCase):
             self.home.navigate_back_to_home_view()
             profile = self.home.profile_button.click()
             profile.logout_button.scroll_to_element()
-            profile.profile_legacy_button.click()
-            profile.sync_settings_button.click()
+            profile.advanced_button.click()
             profile.backup_settings_button.click()
             profile.perform_backup_button.click()
 

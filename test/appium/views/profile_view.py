@@ -177,8 +177,6 @@ class ProfileView(BaseView):
         self.profile_wallet_button = Button(self.driver, accessibility_id="icon, Wallet, label-component, icon")
         self.profile_networks_button = Button(self.driver, accessibility_id='icon, Networks, label-component, icon')
         self.network_settings_button = Button(self.driver, accessibility_id="Network settings, label-component, icon")
-        self.profile_legacy_button = Button(self.driver,
-                                            accessibility_id="icon, Legacy settings, label-component, icon")
         self.testnet_mode_toggle = Button(self.driver, accessibility_id="icon, Testnet mode, label-component")
         self.confirm_testnet_mode_change_button = Button(self.driver, accessibility_id="confirm-testnet-mode-change")
         self.key_pairs_and_accounts_button = Button(self.driver,

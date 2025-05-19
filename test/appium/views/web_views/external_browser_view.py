@@ -16,7 +16,8 @@ class BaseBrowserView(BaseView):
         self.search_box_element = EditBox(self.driver, id='com.android.chrome:id/search_box_text')
         self.url_input = EditBox(self.driver, id='com.android.chrome:id/url_bar')
         self.no_thanks_button = Button(self.driver, id='com.android.chrome:id/negative_button')
-        self.search_wallet_input = EditBox(self.driver, xpath="(//android.widget.EditText)[2]")
+        self.search_wallet_input = EditBox(
+            self.driver, xpath="//*[@text='All Wallets']/../../../following-sibling::*//android.widget.EditText")
         self.status_app_button = Button(self.driver, xpath="//*[starts-with(@text,'Status Status')]")
 
     def wait_for_app_to_run(self, app_package: str, wait_time: int = 3):
